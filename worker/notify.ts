@@ -1,5 +1,6 @@
 import { formatPrice, formatSize } from "@/lib/format";
-import { SOURCE_LABELS, type OrderSource } from "@/lib/orders";
+import { PAYMENT_LABELS, SOURCE_LABELS, type OrderSource, type PaymentMethod } from "@/lib/orders";
+import { formatPhone } from "@/lib/phone";
 import type { Size } from "@/lib/types";
 import { HttpError, json, type AppEnv } from "./http";
 
@@ -23,7 +24,14 @@ async function sendTelegram(env: AppEnv, text: string): Promise<boolean> {
 
 export async function notifyNewOrder(
   env: AppEnv,
-  order: { ref: string; total: number; source: OrderSource; lines: readonly { name: string; color: string; size: Size; qty: number }[] },
+  order: {
+    ref: string;
+    total: number;
+    source: OrderSource;
+    lines: readonly { name: string; color: string; size: Size; qty: number }[];
+    /** Rempli quand le client a utilisé le formulaire du site */
+    customer?: { name: string; phone: string; district: string; zone: string; payment: PaymentMethod; note: string | null } | null;
+  },
 ): Promise<void> {
   const lines = order.lines.map((l) => `• ${esc(l.name)} — ${esc(l.color)} — ${formatSize(l.size)} — x${l.qty}`);
   const link = `${env.SITE_URL}/admin/commandes/?q=${encodeURIComponent(order.ref)}`;
@@ -32,9 +40,18 @@ export async function notifyNewOrder(
     [
       `🛍️ <b>Nouvelle commande ${order.ref}</b> (${SOURCE_LABELS[order.source]})`,
       ...lines,
-      `<b>Total articles : ${formatPrice(order.total)}</b>`,
+      `<b>Total : ${formatPrice(order.total)}</b>`,
       "",
-      `Le client va t'écrire sur WhatsApp avec cette référence.`,
+      ...(order.customer
+        ? [
+            `👤 ${esc(order.customer.name)} — ${formatPhone(order.customer.phone)}`,
+            `📍 ${esc(order.customer.district)} (${esc(order.customer.zone)})`,
+            `💳 ${PAYMENT_LABELS[order.customer.payment]}`,
+            ...(order.customer.note ? [`💬 ${esc(order.customer.note)}`] : []),
+            "",
+            "Commande passée avec le formulaire du site : appelle ou écris au client pour confirmer.",
+          ]
+        : ["Le client va t'écrire sur WhatsApp avec cette référence."]),
       `<a href="${link}">Ouvrir dans le dashboard</a>`,
     ].join("\n"),
   );

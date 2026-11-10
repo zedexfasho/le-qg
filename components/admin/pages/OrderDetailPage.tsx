@@ -367,7 +367,7 @@ export function OrderDetailPage() {
                 <li key={e.id} className="relative text-sm">
                   <span className="absolute top-1.5 -left-[21px] size-2.5 rounded-full bg-accent" aria-hidden="true" />
                   <p className="font-semibold">
-                    {e.type === "statut" && e.to_status ? `→ ${STATUS_LABELS[e.to_status]}` : e.type === "creation" ? "Commande créée" : e.type === "paiement" ? "Paiement reçu" : e.type === "paiement_annule" ? "Paiement retiré" : e.type === "note" ? "Suivi" : "Modification"}
+                    {e.type === "statut" && e.to_status ? `→ ${STATUS_LABELS[e.to_status]}` : e.type === "creation" ? "Commande créée" : e.type === "paiement" ? "Paiement reçu" : e.type === "paiement_annule" ? "Paiement retiré" : e.type === "note" ? "Suivi" : e.type === "formulaire" ? "Formulaire du site" : "Modification"}
                   </p>
                   {e.note && <p className="text-muted">{e.note}</p>}
                   <p className="text-xs text-muted">

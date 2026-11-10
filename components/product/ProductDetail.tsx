@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
+import { Check, Minus, Plus, Send, ShoppingBag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { WhatsAppIcon } from "@/components/brand/SocialIcons";
+import { CheckoutDialog } from "@/components/checkout/CheckoutForm";
 import { Gallery } from "@/components/product/Gallery";
 import { Price } from "@/components/product/Price";
 import { SizeGuide } from "@/components/product/SizeGuide";
@@ -31,6 +32,7 @@ export function ProductDetail({ product: staticProduct }: { product: Product }) 
   const [qty, setQty] = useState(1);
   const [sizeError, setSizeError] = useState(false);
   const [added, setAdded] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   // La barre d'achat mobile remplace le bouton WhatsApp flottant
   useEffect(() => {
@@ -84,6 +86,16 @@ export function ProductDetail({ product: staticProduct }: { product: Product }) 
     registerOrder(ref, [{ slug: product.slug, color: variant.color, size, qty }]);
   };
 
+  // « Commander sur le site » : il faut d'abord une taille
+  const openCheckout = () => {
+    if (!size) {
+      setSizeError(true);
+      document.getElementById("size-picker")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    setCheckoutOpen(true);
+  };
+
   const addToCart = () => {
     if (!size) {
       setSizeError(true);
@@ -100,10 +112,11 @@ export function ProductDetail({ product: staticProduct }: { product: Product }) 
         onClick={requireSize}
         target={orderUrl ? "_blank" : undefined}
         rel="noopener noreferrer"
-        className={buttonClasses("whatsapp", "lg", extra)}
+        className={compact ? `grid size-13 place-items-center rounded-full bg-whatsapp text-[#10230F] shadow-warm ${extra}` : buttonClasses("whatsapp", "lg", extra)}
+        aria-label={compact ? "Commander sur WhatsApp" : undefined}
       >
         <WhatsAppIcon className="size-5" />
-        {compact ? "Commander" : "Commander sur WhatsApp"}
+        {!compact && "Commander sur WhatsApp"}
       </a>
     ) : (
       <a
@@ -247,6 +260,12 @@ export function ProductDetail({ product: staticProduct }: { product: Product }) 
 
         {/* Actions */}
         <div className="mt-6 flex max-w-md flex-col gap-3">
+          {variantAvailable && (
+            <button type="button" onClick={openCheckout} className={buttonClasses("primary", "lg", "w-full whitespace-nowrap")}>
+              <Send className="size-5" aria-hidden="true" />
+              Commander sur le site
+            </button>
+          )}
           {whatsappButton("w-full whitespace-nowrap")}
           {variantAvailable && (
             <button type="button" onClick={addToCart} className={buttonClasses("secondary", "lg", "w-full whitespace-nowrap")}>
@@ -285,9 +304,24 @@ export function ProductDetail({ product: staticProduct }: { product: Product }) 
             </p>
             <p className="font-bold">{formatPrice(product.price * qty)}</p>
           </div>
+          {variantAvailable && (
+            <button type="button" onClick={openCheckout} className={buttonClasses("primary", "lg", "shrink-0 px-5")}>
+              Commander
+            </button>
+          )}
           {whatsappButton("shrink-0", true)}
         </div>
       </div>
+
+      {size && (
+        <CheckoutDialog
+          open={checkoutOpen}
+          onClose={() => setCheckoutOpen(false)}
+          items={[{ slug: product.slug, color: variant.color, size, qty }]}
+          lines={[{ name: product.name, color: variant.color, size, qty, unitPrice: product.price }]}
+          getRef={getRef}
+        />
+      )}
     </div>
   );
 }

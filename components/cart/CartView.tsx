@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Minus, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Minus, Plus, Send, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { HangerIcon } from "@/components/brand/Decor";
+import { CheckoutDialog, OrderConfirmation, type ConfirmedOrder } from "@/components/checkout/CheckoutForm";
 import { WhatsAppIcon } from "@/components/brand/SocialIcons";
 import { ProductImage } from "@/components/product/ProductImage";
 import { buttonClasses, cardClasses } from "@/components/ui/styles";
@@ -19,6 +21,17 @@ export function CartView({ products: staticProducts }: { products: Product[] }) 
   // Stock et prix en direct (le site statique peut avoir quelques minutes de retard)
   const products = useLiveProducts(staticProducts);
   const getRef = useOrderRef();
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [confirmed, setConfirmed] = useState<ConfirmedOrder | null>(null);
+
+  // Commande envoyée avec le formulaire : le panier est vidé, on affiche la confirmation
+  if (confirmed) {
+    return (
+      <div className={`${cardClasses} p-6 sm:p-10`}>
+        <OrderConfirmation order={confirmed} />
+      </div>
+    );
+  }
 
   // Pendant le chargement, on réserve exactement la place du panier vide (pas de saut de mise en page)
   if (!hydrated || items.length === 0) {
@@ -43,15 +56,13 @@ export function CartView({ products: staticProducts }: { products: Product[] }) 
   const total = cartTotal(orderLines);
   const hasIssues = lines.some((l) => l.status !== "ok");
   const whatsappUrl = orderLines.length ? buildWhatsAppUrl(buildWhatsAppMessage(orderLines)) : undefined;
+  const orderItems = lines.filter((l) => l.product && l.status !== "unavailable" && l.qty > 0).map((l) => ({ slug: l.item.slug, color: l.item.color, size: l.item.size, qty: l.qty }));
 
   // Au clic : référence ajoutée au message + commande enregistrée pour le dashboard
   const onOrder = (event: React.MouseEvent<HTMLAnchorElement>) => {
     const ref = getRef();
     event.currentTarget.href = buildWhatsAppUrl(buildWhatsAppMessage(orderLines, { reference: ref }));
-    registerOrder(
-      ref,
-      lines.filter((l) => l.product && l.status !== "unavailable" && l.qty > 0).map((l) => ({ slug: l.item.slug, color: l.item.color, size: l.item.size, qty: l.qty })),
-    );
+    registerOrder(ref, orderItems);
   };
 
   return (
@@ -141,18 +152,24 @@ export function CartView({ products: staticProducts }: { products: Product[] }) 
         </dl>
 
         {whatsappUrl ? (
-          <a href={whatsappUrl} onClick={onOrder} target="_blank" rel="noopener noreferrer" className={buttonClasses("whatsapp", "lg", "mt-5 w-full")}>
-            <WhatsAppIcon className="size-5" />
-            Commander sur WhatsApp
-          </a>
+          <div className="mt-5 flex flex-col gap-3">
+            <button type="button" onClick={() => setCheckoutOpen(true)} className={buttonClasses("primary", "lg", "w-full")}>
+              <Send className="size-5" aria-hidden="true" />
+              Commander sur le site
+            </button>
+            <a href={whatsappUrl} onClick={onOrder} target="_blank" rel="noopener noreferrer" className={buttonClasses("whatsapp", "lg", "w-full")}>
+              <WhatsAppIcon className="size-5" />
+              Commander sur WhatsApp
+            </a>
+          </div>
         ) : (
           <p className="mt-5 text-sm font-semibold text-accent-strong">Aucun article de ton panier n&apos;est disponible pour le moment.</p>
         )}
         <p className="mt-3 text-xs text-muted">
-          Un seul message récapitule toute ta commande. Tu confirmes ton nom, ton quartier et ton moyen de paiement directement sur WhatsApp.
+          Sur le site : tu laisses ton numéro et ton adresse, on te contacte pour confirmer. Sur WhatsApp : un message tout prêt récapitule ta commande.
         </p>
         {hasIssues && (
-          <p className="mt-3 text-xs text-muted">Les articles épuisés ne sont pas inclus dans le message.</p>
+          <p className="mt-3 text-xs text-muted">Les articles épuisés ne sont pas inclus dans la commande.</p>
         )}
         <button
           type="button"
@@ -164,6 +181,20 @@ export function CartView({ products: staticProducts }: { products: Product[] }) 
           Vider le panier
         </button>
       </aside>
+
+      <CheckoutDialog
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        items={orderItems}
+        lines={orderLines}
+        getRef={getRef}
+        onConfirmed={(order) => {
+          setConfirmed(order);
+          setCheckoutOpen(false);
+          cart.clear();
+          window.scrollTo({ top: 0 });
+        }}
+      />
     </div>
   );
 }
