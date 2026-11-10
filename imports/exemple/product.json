@@ -1,0 +1,22 @@
+{
+  "name": "Hoodie oversize brodé",
+  "category": "hoodies",
+  "price": 27000,
+  "condition": "Neuf avec étiquette",
+  "description": "Hoodie oversize en molleton épais, broderie poitrine, capuche doublée.",
+  "dropId": "drop-novembre-2026",
+  "variants": [
+    {
+      "color": "Noir",
+      "colorHex": "#1C1A19",
+      "photos": ["noir-1.jpg", "noir-2.jpg"],
+      "stock": { "M": 2, "L": 3, "XL": 1 }
+    },
+    {
+      "color": "Beige",
+      "colorHex": "#D9C3A0",
+      "photos": ["beige-1.jpg"],
+      "stock": { "S": 1, "M": 2, "L": 0 }
+    }
+  ]
+}

@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# photos déposées pour le script d'ajout (seul l'exemple est versionné)
+/imports/*
+!/imports/exemple/
