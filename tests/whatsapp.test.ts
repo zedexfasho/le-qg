@@ -105,3 +105,10 @@ describe("normalizePhone", () => {
     expect(normalizePhone(undefined)).toBeNull();
   });
 });
+
+describe("référence de commande dans le message", () => {
+  it("ajoute la référence sur la ligne d'intro", () => {
+    const message = buildWhatsAppMessage([hoodie], { reference: "QG-K7F3M9P" });
+    expect(message.split("\n")[1]).toBe("Je veux commander (réf. QG-K7F3M9P) :");
+  });
+});

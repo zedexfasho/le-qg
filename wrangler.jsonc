@@ -1,12 +1,36 @@
-// Cloudflare Workers (fichiers statiques) — le site est un export statique (dossier out/)
+// Cloudflare Workers — site statique (dossier out/) + API des commandes (worker/)
 // Déploiement : npm run deploy
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "le-qg",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-11-01",
   "assets": {
     "directory": "./out",
+    "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
-    "not_found_handling": "404-page"
-  }
+    "not_found_handling": "404-page",
+    // Seules l'API et les photos passent par le Worker ; tout le reste est servi directement
+    "run_worker_first": ["/api/*", "/media/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "le-qg-db",
+      "database_id": "26dd55fb-f650-471e-a6cf-237c9c9e0cdd",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [{ "binding": "MEDIA", "id": "e71ace0001ca4c6e824fdf1954b3870e" }],
+  "vars": {
+    "SITE_URL": "https://le-qg.junior-cherif.workers.dev",
+    "GITHUB_REPO": "zedexfasho/le-qg",
+    "GITHUB_WORKFLOW": "deploy.yml"
+  },
+  // Chaque matin à 6h (Dakar = UTC) : commandes du site restées sans réponse depuis 3 jours → « Sans suite »
+  "triggers": { "crons": ["0 6 * * *"] },
+  "observability": { "enabled": true }
+  // Secrets (facultatifs) à ajouter avec `npx wrangler secret put NOM` :
+  //   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID  → alerte à chaque nouvelle commande
+  //   GITHUB_TOKEN                          → bouton « Publier le site » du dashboard
 }

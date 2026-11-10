@@ -8,9 +8,11 @@
 
 /** Adresse publique du site. Sur Vercel, l'adresse du projet est détectée automatiquement. */
 function resolveSiteUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL;
+  // `process` n'existe pas dans le Worker Cloudflare (API) : on se contente alors de la valeur par défaut
+  const env: Record<string, string | undefined> = typeof process === "undefined" ? {} : process.env;
+  const fromEnv = env.NEXT_PUBLIC_SITE_URL;
   if (fromEnv) return fromEnv.replace(/\/+$/, "");
-  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const vercel = env.VERCEL_PROJECT_PRODUCTION_URL;
   if (vercel) return `https://${vercel}`;
   return "http://localhost:3000";
 }

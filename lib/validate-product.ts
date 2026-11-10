@@ -4,8 +4,12 @@ import { CATEGORIES, SIZES, type Product } from "./types";
  * Vérifie un produit (utilisé par le script d'ajout et par les tests du catalogue).
  * Renvoie la liste des erreurs, en français ; tableau vide = produit valide.
  */
+/**
+ * requireImages: false = brouillon : photos et prix peuvent manquer (prix 0), ils seront exigés à la publication.
+ */
 export function validateProduct(input: unknown, options: { requireImages?: boolean } = {}): string[] {
   const errors: string[] = [];
+  const draft = options.requireImages === false;
   const p = input as Partial<Product> & Record<string, unknown>;
   if (typeof input !== "object" || input === null) return ["Le produit doit être un objet JSON."];
 
@@ -15,8 +19,8 @@ export function validateProduct(input: unknown, options: { requireImages?: boole
   if (typeof p.name !== "string" || p.name.trim().length < 2) errors.push("name manquant.");
   if (typeof p.condition !== "string" || !p.condition.trim()) errors.push('condition manquante (ex. "Neuf avec étiquette").');
   if (!CATEGORIES.includes(p.category as never)) errors.push(`category invalide : choisir parmi ${CATEGORIES.join(", ")}.`);
-  if (!Number.isInteger(p.price) || (p.price as number) <= 0) errors.push("price doit être un nombre entier positif en FCFA (ex. 25000).");
-  if (p.oldPrice !== undefined && (!Number.isInteger(p.oldPrice) || (p.oldPrice as number) <= (p.price as number))) {
+  if (!Number.isInteger(p.price) || (p.price as number) < 0 || (!draft && p.price === 0)) errors.push("price doit être un nombre entier positif en FCFA (ex. 25000).");
+  if (p.oldPrice !== undefined && p.price !== 0 && (!Number.isInteger(p.oldPrice) || (p.oldPrice as number) <= (p.price as number))) {
     errors.push("oldPrice doit être un entier supérieur à price (ou être retiré).");
   }
   if (typeof p.description !== "string") errors.push("description manquante (peut être vide : \"\").");
