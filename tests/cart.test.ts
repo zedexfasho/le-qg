@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { products } from "@/data/products";
+import fixture from "./fixtures/products.json";
+import type { Product } from "@/lib/types";
 import { addLine, cartCount, cartTotal, parseCart, removeLine, resolveCart, setLineQty, toOrderLines } from "@/lib/cart";
 import type { CartItem } from "@/lib/types";
+
+// Catalogue de test figé (indépendant des produits réels publiés depuis le dashboard)
+const products = fixture as Product[];
 
 const item: CartItem = { slug: "hoodie-zippe-essentiel", color: "Gris chiné", size: "M", qty: 1 };
 

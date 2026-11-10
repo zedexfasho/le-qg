@@ -12,7 +12,6 @@
  *
  * Un produit dont le lien (slug) existe déjà en base n'est pas modifié.
  */
-import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,7 +20,7 @@ import sharp from "sharp";
 import { slugify } from "../lib/format";
 import { CATEGORIES, SIZES, type Category, type Product, type Size } from "../lib/types";
 import { validateProduct } from "../lib/validate-product";
-import { executeSql, sql, targetFromArgs } from "./lib/wrangler";
+import { executeSql, runWranglerWithRetry, sql, targetFromArgs } from "./lib/wrangler";
 
 interface Draft {
   name: string;
@@ -97,14 +96,10 @@ async function main() {
     batches.forEach((batch, i) => {
       const bulk = path.join(tmp, `photos-${i}.json`);
       writeFileSync(bulk, JSON.stringify(batch));
-      for (let attempt = 1; ; attempt++) {
-        const kv = spawnSync("npx", ["wrangler", "kv", "bulk", "put", bulk, "--binding", "MEDIA", target], {
-          stdio: "inherit",
-          shell: process.platform === "win32",
-        });
-        if (kv.status === 0) break;
-        if (attempt === 3) fail(`L'envoi des photos a échoué (paquet ${i + 1}/${batches.length}, voir ci-dessus).`);
-        console.log(`  nouvel essai du paquet ${i + 1}…`);
+      try {
+        runWranglerWithRetry(["kv", "bulk", "put", bulk, "--binding", "MEDIA", target]);
+      } catch {
+        fail(`L'envoi des photos a échoué (paquet ${i + 1}/${batches.length}, voir ci-dessus).`);
       }
     });
 

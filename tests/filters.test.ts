@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { products } from "@/data/products";
+import fixture from "./fixtures/products.json";
+import type { Product } from "@/lib/types";
 import { applyFilters, facetsOf, parseFilters, serializeFilters, type FilterState } from "@/lib/filters";
+
+// Catalogue de test figé (indépendant des produits réels publiés depuis le dashboard)
+const products = fixture as Product[];
 
 const params = (query: string) => new URLSearchParams(query);
 const base: FilterState = { sizes: [], colors: [], sort: "new" };
