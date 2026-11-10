@@ -235,10 +235,10 @@ export function ProductDetail({ product }: { product: Product }) {
         )}
 
         {/* Actions */}
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          {whatsappButton("w-full sm:flex-1")}
+        <div className="mt-6 flex max-w-md flex-col gap-3">
+          {whatsappButton("w-full whitespace-nowrap")}
           {variantAvailable && (
-            <button type="button" onClick={addToCart} className={buttonClasses("secondary", "lg", "w-full sm:flex-1")}>
+            <button type="button" onClick={addToCart} className={buttonClasses("secondary", "lg", "w-full whitespace-nowrap")}>
               {added ? <Check className="size-5" aria-hidden="true" /> : <ShoppingBag className="size-5" aria-hidden="true" />}
               {added ? "Ajouté au panier" : "Ajouter au panier"}
             </button>
