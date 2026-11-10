@@ -1,0 +1,12 @@
+// Cloudflare Workers (fichiers statiques) — le site est un export statique (dossier out/)
+// Déploiement : npm run deploy
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "le-qg",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./out",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  }
+}

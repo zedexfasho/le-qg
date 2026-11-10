@@ -3,7 +3,7 @@
 Site catalogue avec commande sur WhatsApp. Le client choisit modèle, couleur, taille et quantité, et un message WhatsApp pré-rempli part vers la boutique. Pas de paiement en ligne.
 
 - **Next.js 16** (App Router) + TypeScript strict + Tailwind CSS v4
-- Site **100 % statique** (`out/`) : se met en ligne sur Vercel, Netlify ou Hostinger, sans serveur
+- Site **100 % statique** (`out/`) : en ligne sur Cloudflare (https://le-qg.junior-cherif.workers.dev), déplaçable sur Vercel, Netlify ou Hostinger, sans serveur
 - Données dans des fichiers (`data/`), pas de base de données (v1)
 
 ---
@@ -111,14 +111,29 @@ Lance le lint, la vérification TypeScript, les tests (message WhatsApp, prix, f
 
 ## 5. Mettre en ligne
 
-### Option A — Vercel (recommandé, gratuit, le plus simple)
+### Option A — Cloudflare (actuel)
+
+Le site est en ligne sur **https://le-qg.junior-cherif.workers.dev** (Cloudflare Workers, fichiers statiques, gratuit).
+
+1. Après une modification (produit, réglage…), lance :
+   ```bash
+   npm run deploy
+   ```
+   Ça construit le site et l’envoie en ligne (environ 1 minute). Pour tout vérifier avant : `npm run check`.
+2. Si Cloudflare demande de se reconnecter : `npx wrangler login`, puis clique sur **Allow** dans le navigateur.
+3. L'adresse publique utilisée pour le sitemap et les aperçus WhatsApp est dans `.env.production` (`NEXT_PUBLIC_SITE_URL`).
+4. Nom de domaine (`leqg.sn`…) : tableau de bord Cloudflare → **Workers & Pages → le-qg → Settings → Domains & Routes → Add → Custom domain**, puis mets la nouvelle adresse dans `.env.production` et relance `npm run deploy`.
+
+Réglages : `wrangler.jsonc` (dossier `out/`, page 404) et `public/_headers` (cache, sécurité).
+
+### Option B — Vercel (alternative, déploiement automatique depuis GitHub)
 
 1. Mets le projet sur GitHub.
 2. Sur https://vercel.com → **Add New… → Project** → importe le dépôt → **Deploy**. Aucun réglage à changer.
 3. Chaque `git push` remet le site à jour automatiquement (environ 1 minute).
 4. Nom de domaine (`leqg.sn`…) : **Settings → Domains** du projet, puis ajoute dans *Environment Variables* `NEXT_PUBLIC_SITE_URL = https://leqg.sn` (pour les liens de partage et le sitemap) et redéploie.
 
-### Option B — Hostinger (hébergement web classique)
+### Option C — Hostinger (hébergement web classique)
 
 1. Dans `data/site.ts`, rien à changer. Lance avec l'adresse finale du site :
    ```bash

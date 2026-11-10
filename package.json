@@ -13,7 +13,8 @@
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
     "add-product": "tsx scripts/add-product.ts",
     "brand": "tsx scripts/generate-brand.ts",
-    "placeholders": "tsx scripts/generate-placeholders.ts"
+    "placeholders": "tsx scripts/generate-placeholders.ts",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "lucide-react": "^1.70.0",
@@ -32,7 +33,8 @@
     "tailwindcss": "4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "^4.160.0"
   },
   "engines": {
     "node": ">=20.9"
