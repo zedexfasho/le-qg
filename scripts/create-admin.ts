@@ -10,25 +10,55 @@ import { createInterface } from "node:readline";
 import { hashPassword, passwordProblem } from "../lib/password";
 import { executeSql, sql, targetFromArgs } from "./lib/wrangler";
 
-type Muted = { _writeToOutput: (s: string) => void };
-
-function ask(question: string, hidden = false): Promise<string> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-  if (hidden) {
-    const muted = rl as unknown as Muted;
-    const write = muted._writeToOutput.bind(rl);
-    muted._writeToOutput = (s: string) => {
-      if (s.startsWith(question) || s === "\r\n" || s === "\n") write(s);
-      else write("*".repeat(s.length));
-    };
-  }
+/** Question visible (email, prénom) */
+function ask(question: string): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) =>
     rl.question(question, (answer) => {
       rl.close();
-      if (hidden) process.stdout.write("\n");
       resolve(answer.trim());
     }),
   );
+}
+
+/**
+ * Mot de passe : lu touche par touche, seules des étoiles s'affichent.
+ * (Ne passe pas par readline, qui réaffiche parfois la ligne en clair.)
+ */
+function askHidden(question: string): Promise<string> {
+  const stdin = process.stdin;
+  if (!stdin.isTTY) throw new Error("Lance la commande dans un terminal (le mot de passe est saisi au clavier).");
+  process.stdout.write(question);
+  return new Promise((resolve, reject) => {
+    let value = "";
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding("utf8");
+    const done = (error?: Error) => {
+      stdin.setRawMode(false);
+      stdin.pause();
+      stdin.off("data", onData);
+      process.stdout.write("\n");
+      if (error) reject(error);
+      else resolve(value);
+    };
+    const onData = (chunk: string) => {
+      for (const char of chunk) {
+        if (char === "\r" || char === "\n") return done();
+        if (char === "\u0003") return done(new Error("Annulé."));
+        if (char === "\u007f" || char === "\b") {
+          if (value.length) {
+            value = value.slice(0, -1);
+            process.stdout.write("\b \b");
+          }
+        } else if (char >= " ") {
+          value += char;
+          process.stdout.write("*");
+        }
+      }
+    };
+    stdin.on("data", onData);
+  });
 }
 
 async function main() {
@@ -39,8 +69,8 @@ async function main() {
   const name = process.env.ADMIN_NAME ?? (await ask("Prénom : "));
   let password = process.env.ADMIN_PASSWORD ?? "";
   if (!password) {
-    password = await ask("Mot de passe (10 caractères minimum) : ", true);
-    const again = await ask("Confirme le mot de passe : ", true);
+    password = await askHidden("Mot de passe (10 caractères minimum) : ");
+    const again = await askHidden("Confirme le mot de passe : ");
     if (again !== password) throw new Error("Les deux mots de passe ne correspondent pas.");
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Email invalide.");

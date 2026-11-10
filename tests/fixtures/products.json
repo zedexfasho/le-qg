@@ -1,0 +1,360 @@
+[
+  {
+    "slug": "sacoche-bandouliere",
+    "name": "Sacoche bandoulière",
+    "condition": "Neuf avec étiquette",
+    "category": "accessoires",
+    "price": 10000,
+    "oldPrice": 12000,
+    "description": "Petite sacoche bandoulière, deux compartiments zippés, sangle réglable. Assez grande pour téléphone, clés et portefeuille.",
+    "variants": [
+      {
+        "color": "Noir",
+        "colorHex": "#1C1A19",
+        "images": [
+          "/products/sacoche-bandouliere/1.webp",
+          "/products/sacoche-bandouliere/2.webp"
+        ],
+        "stock": {
+          "TU": 4
+        }
+      },
+      {
+        "color": "Kaki",
+        "colorHex": "#6B6A3A",
+        "images": [
+          "/products/sacoche-bandouliere/3.webp",
+          "/products/sacoche-bandouliere/4.webp"
+        ],
+        "stock": {
+          "TU": 1
+        }
+      }
+    ],
+    "isNew": true,
+    "createdAt": "2026-11-07T10:00:00.000Z"
+  },
+  {
+    "slug": "hoodie-zippe-essentiel",
+    "name": "Hoodie zippé essentiel",
+    "condition": "Neuf avec étiquette",
+    "category": "hoodies",
+    "price": 25000,
+    "description": "Hoodie zippé en molleton épais, capuche doublée, poches kangourou. Coupe droite, se porte un peu oversize. Parfait pour les soirées au bord de la Corniche.",
+    "variants": [
+      {
+        "color": "Gris chiné",
+        "colorHex": "#BDBAB4",
+        "images": [
+          "/products/hoodie-zippe-essentiel/1.webp",
+          "/products/hoodie-zippe-essentiel/2.webp"
+        ],
+        "stock": {
+          "S": 2,
+          "M": 4,
+          "L": 3,
+          "XL": 1,
+          "XXL": 0
+        }
+      },
+      {
+        "color": "Noir",
+        "colorHex": "#1C1A19",
+        "images": [
+          "/products/hoodie-zippe-essentiel/3.webp",
+          "/products/hoodie-zippe-essentiel/4.webp"
+        ],
+        "stock": {
+          "S": 0,
+          "M": 2,
+          "L": 5,
+          "XL": 2,
+          "XXL": 1
+        }
+      },
+      {
+        "color": "Sable",
+        "colorHex": "#D9C3A0",
+        "images": [
+          "/products/hoodie-zippe-essentiel/5.webp",
+          "/products/hoodie-zippe-essentiel/6.webp"
+        ],
+        "stock": {
+          "M": 1,
+          "L": 2,
+          "XL": 0
+        }
+      }
+    ],
+    "isNew": true,
+    "dropId": "drop-novembre-2026",
+    "createdAt": "2026-11-06T10:00:00.000Z"
+  },
+  {
+    "slug": "ensemble-survetement-coton",
+    "name": "Ensemble survêtement coton",
+    "condition": "Neuf avec étiquette",
+    "category": "ensembles",
+    "price": 45000,
+    "oldPrice": 52000,
+    "description": "Ensemble sweat col rond + jogging assorti en coton brossé. Bas resserré aux chevilles, cordon de serrage. Vendu en lot (haut + bas, même taille).",
+    "variants": [
+      {
+        "color": "Noir",
+        "colorHex": "#1C1A19",
+        "images": [
+          "/products/ensemble-survetement-coton/1.webp",
+          "/products/ensemble-survetement-coton/2.webp"
+        ],
+        "stock": {
+          "S": 1,
+          "M": 3,
+          "L": 3,
+          "XL": 2
+        }
+      },
+      {
+        "color": "Bleu nuit",
+        "colorHex": "#1F2A44",
+        "images": [
+          "/products/ensemble-survetement-coton/3.webp",
+          "/products/ensemble-survetement-coton/4.webp"
+        ],
+        "stock": {
+          "M": 2,
+          "L": 1,
+          "XL": 0
+        }
+      },
+      {
+        "color": "Bordeaux",
+        "colorHex": "#6B1E2A",
+        "images": [
+          "/products/ensemble-survetement-coton/5.webp",
+          "/products/ensemble-survetement-coton/6.webp"
+        ],
+        "stock": {
+          "S": 0,
+          "M": 0,
+          "L": 2
+        }
+      }
+    ],
+    "isNew": true,
+    "dropId": "drop-novembre-2026",
+    "createdAt": "2026-11-05T10:00:00.000Z"
+  },
+  {
+    "slug": "jogging-cargo",
+    "name": "Jogging cargo",
+    "condition": "Neuf avec étiquette",
+    "category": "joggings",
+    "price": 15000,
+    "description": "Jogging cargo avec poches latérales à rabat, taille élastique et chevilles ajustables.",
+    "variants": [
+      {
+        "color": "Noir",
+        "colorHex": "#1C1A19",
+        "images": [
+          "/products/jogging-cargo/1.webp",
+          "/products/jogging-cargo/2.webp"
+        ],
+        "stock": {
+          "S": 3,
+          "M": 5,
+          "L": 4,
+          "XL": 2
+        }
+      },
+      {
+        "color": "Kaki",
+        "colorHex": "#6B6A3A",
+        "images": [
+          "/products/jogging-cargo/3.webp",
+          "/products/jogging-cargo/4.webp"
+        ],
+        "stock": {
+          "M": 2,
+          "L": 2
+        }
+      },
+      {
+        "color": "Anthracite",
+        "colorHex": "#3A3A3C",
+        "images": [
+          "/products/jogging-cargo/5.webp",
+          "/products/jogging-cargo/6.webp"
+        ],
+        "stock": {
+          "S": 1,
+          "M": 0,
+          "L": 1
+        }
+      }
+    ],
+    "dropId": "drop-novembre-2026",
+    "createdAt": "2026-11-04T10:00:00.000Z"
+  },
+  {
+    "slug": "tshirt-graphique-terrasse",
+    "name": "T-shirt graphique « Terrasse »",
+    "condition": "Neuf avec étiquette",
+    "category": "tshirts",
+    "price": 8000,
+    "description": "T-shirt en coton épais, coupe oversize, imprimé coucher de soleil sur les toits. Design exclusif Le QG.",
+    "variants": [
+      {
+        "color": "Blanc cassé",
+        "colorHex": "#F2EEE6",
+        "images": [
+          "/products/tshirt-graphique-terrasse/1.webp",
+          "/products/tshirt-graphique-terrasse/2.webp"
+        ],
+        "stock": {
+          "XS": 1,
+          "S": 4,
+          "M": 6,
+          "L": 5,
+          "XL": 3,
+          "XXL": 1
+        }
+      },
+      {
+        "color": "Noir",
+        "colorHex": "#1C1A19",
+        "images": [
+          "/products/tshirt-graphique-terrasse/3.webp",
+          "/products/tshirt-graphique-terrasse/4.webp"
+        ],
+        "stock": {
+          "S": 2,
+          "M": 3,
+          "L": 0,
+          "XL": 2
+        }
+      }
+    ],
+    "isNew": true,
+    "createdAt": "2026-11-03T10:00:00.000Z"
+  },
+  {
+    "slug": "maillot-retro-vert",
+    "name": "Maillot rétro vert",
+    "condition": "Neuf sans étiquette",
+    "category": "maillots",
+    "price": 15000,
+    "description": "Maillot de foot style rétro années 90, col en V, tissu respirant. Sans logo d'équipe.",
+    "variants": [
+      {
+        "color": "Vert",
+        "colorHex": "#1E7B45",
+        "images": [
+          "/products/maillot-retro-vert/1.webp",
+          "/products/maillot-retro-vert/2.webp"
+        ],
+        "stock": {
+          "S": 1,
+          "M": 2,
+          "L": 2,
+          "XL": 1
+        }
+      },
+      {
+        "color": "Blanc",
+        "colorHex": "#F7F5F0",
+        "images": [
+          "/products/maillot-retro-vert/3.webp",
+          "/products/maillot-retro-vert/4.webp"
+        ],
+        "stock": {
+          "S": 0,
+          "M": 0,
+          "L": 0,
+          "XL": 0
+        }
+      }
+    ],
+    "dropId": "drop-octobre-2026",
+    "createdAt": "2026-10-18T10:00:00.000Z"
+  },
+  {
+    "slug": "chemise-wax-manches-courtes",
+    "name": "Chemise wax manches courtes",
+    "condition": "Neuf avec étiquette",
+    "category": "chemises",
+    "price": 18000,
+    "description": "Chemise en tissu wax, manches courtes, coupe droite. Confectionnée à Dakar.",
+    "variants": [
+      {
+        "color": "Wax orange",
+        "colorHex": "#D9661F",
+        "images": [
+          "/products/chemise-wax-manches-courtes/1.webp",
+          "/products/chemise-wax-manches-courtes/2.webp"
+        ],
+        "stock": {
+          "M": 2,
+          "L": 2,
+          "XL": 1
+        }
+      },
+      {
+        "color": "Wax bleu",
+        "colorHex": "#2B4C8C",
+        "images": [
+          "/products/chemise-wax-manches-courtes/3.webp",
+          "/products/chemise-wax-manches-courtes/4.webp"
+        ],
+        "stock": {
+          "S": 1,
+          "M": 1,
+          "L": 0
+        }
+      }
+    ],
+    "dropId": "drop-octobre-2026",
+    "createdAt": "2026-10-16T10:00:00.000Z"
+  },
+  {
+    "slug": "bonnet-cotele",
+    "name": "Bonnet côtelé",
+    "condition": "Neuf avec étiquette",
+    "category": "accessoires",
+    "price": 5000,
+    "description": "Bonnet en maille côtelée avec revers. Taille unique, extensible.",
+    "variants": [
+      {
+        "color": "Noir",
+        "colorHex": "#1C1A19",
+        "images": [
+          "/products/bonnet-cotele/1.webp"
+        ],
+        "stock": {
+          "TU": 6
+        }
+      },
+      {
+        "color": "Orange",
+        "colorHex": "#E76117",
+        "images": [
+          "/products/bonnet-cotele/2.webp"
+        ],
+        "stock": {
+          "TU": 2
+        }
+      },
+      {
+        "color": "Crème",
+        "colorHex": "#F3E3C7",
+        "images": [
+          "/products/bonnet-cotele/3.webp"
+        ],
+        "stock": {
+          "TU": 0
+        }
+      }
+    ],
+    "dropId": "drop-octobre-2026",
+    "createdAt": "2026-10-15T10:00:00.000Z"
+  }
+]
