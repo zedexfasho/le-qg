@@ -1,21 +1,9 @@
 import { site } from "@/data/site";
 import { formatPrice, formatSize } from "./format";
+import { normalizePhone } from "./phone";
 import type { OrderLine } from "./types";
 
-/**
- * Normalise un numéro sénégalais au format international attendu par wa.me.
- *   "+221 77 123 45 67" → "221771234567"
- *   "77 123 45 67"      → "221771234567"
- *   "00221771234567"    → "221771234567"
- * Renvoie `null` si le numéro est invalide.
- */
-export function normalizePhone(input: string | null | undefined): string | null {
-  if (!input) return null;
-  let digits = input.replace(/\D/g, "");
-  if (digits.startsWith("00")) digits = digits.slice(2);
-  if (digits.length === 9) digits = `221${digits}`;
-  return /^221[37]\d{8}$/.test(digits) ? digits : null;
-}
+export { normalizePhone };
 
 /** Nettoie un texte pour qu'il tienne sur une seule ligne du message */
 function oneLine(value: string): string {
@@ -25,6 +13,8 @@ function oneLine(value: string): string {
 export interface MessageOptions {
   shopName?: string;
   paymentLine?: string;
+  /** Référence de commande enregistrée (ex. "QG-K7F3M9P"), affichée dans le message */
+  reference?: string;
 }
 
 /**
@@ -49,7 +39,7 @@ export function buildWhatsAppMessage(items: readonly OrderLine[], options: Messa
 
   return [
     `Salam ${shopName} 👋`,
-    "Je veux commander :",
+    options.reference ? `Je veux commander (réf. ${options.reference}) :` : "Je veux commander :",
     "",
     ...lines,
     "",

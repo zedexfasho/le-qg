@@ -3,8 +3,9 @@
 Site catalogue avec commande sur WhatsApp. Le client choisit modèle, couleur, taille et quantité, et un message WhatsApp pré-rempli part vers la boutique. Pas de paiement en ligne.
 
 - **Next.js 16** (App Router) + TypeScript strict + Tailwind CSS v4
-- Site **100 % statique** (`out/`) : en ligne sur Cloudflare (https://le-qg.junior-cherif.workers.dev), déplaçable sur Vercel, Netlify ou Hostinger, sans serveur
-- Données dans des fichiers (`data/`), pas de base de données (v1)
+- Site **statique** (`out/`) en ligne sur Cloudflare (https://le-qg.junior-cherif.workers.dev)
+- **Dashboard** sur `/admin` : commandes, clients, produits et stock, analyses du business
+- API : un Worker Cloudflare (`worker/`) + base **D1** (SQLite) + photos dans **KV**, tout dans l'offre gratuite
 
 ---
 
@@ -20,7 +21,7 @@ Tout se règle dans **`data/site.ts`** :
 | `exchangePolicy` | Ta vraie politique d'échange (le texte actuel est un exemple). |
 | `story` | Le texte de « Notre histoire » (brouillon à remplacer). |
 
-Ensuite, supprime les **8 produits d'exemple** de `data/products.ts` et leurs dossiers d'images dans `public/products/`, puis ajoute tes vrais produits (section 3).
+Ensuite, dans le dashboard (**Produits**), dépublie ou supprime les **8 produits d'exemple** et ajoute tes vrais produits (section 3).
 
 Le guide des tailles (mesures indicatives) se modifie dans `components/product/SizeGuide.tsx`.
 
@@ -39,63 +40,77 @@ Puis ouvre http://localhost:3000.
 
 ---
 
-## 3. Ajouter un produit (procédure pas à pas)
+## 3. Le dashboard (`/admin`)
 
-1. **Récupère les photos** du téléphone sur l'ordinateur (WhatsApp Web, câble, Google Drive…).
-   Formats acceptés : JPG, PNG, WebP. Les photos HEIC d'iPhone ne passent pas : envoie-les-toi par WhatsApp (elles deviennent des JPG) ou règle l'appareil photo sur « Le plus compatible ».
+Adresse : **https://le-qg.junior-cherif.workers.dev/admin/** (non référencée par Google). Fonctionne sur téléphone.
 
-2. **Crée un dossier** dans `imports/`, par exemple `imports/hoodie-noir/`, et mets-y les photos.
-   Renomme-les simplement : `noir-1.jpg`, `noir-2.jpg`, `beige-1.jpg`…
+### Comment arrivent les commandes
 
-3. **Copie** `imports/exemple/product.json` dans ce dossier et remplis-le :
+1. Le client clique sur « Commander sur WhatsApp » (fiche produit ou panier).
+2. Le site enregistre la commande **et** ajoute une référence au message WhatsApp : « Je veux commander (réf. QG-7K2M9QX) ».
+3. La commande apparaît dans **Commandes → À traiter** avec le statut **Nouvelle**. Si le client n'envoie jamais le message, elle passe en **Sans suite** après 3 jours.
+4. Tu discutes avec le client sur WhatsApp, puis dans la commande : **Confirmer** (le stock est déduit) → **En livraison** → **Livrée**, et **Marquer payée**. Un bouton prépare le message WhatsApp adapté à chaque étape.
+5. **Annuler** remet le stock en place.
 
-   ```json
-   {
-     "name": "Hoodie oversize brodé",
-     "category": "hoodies",
-     "price": 27000,
-     "condition": "Neuf avec étiquette",
-     "description": "Hoodie oversize en molleton épais, broderie poitrine.",
-     "dropId": "drop-novembre-2026",
-     "variants": [
-       { "color": "Noir",  "colorHex": "#1C1A19", "photos": ["noir-1.jpg", "noir-2.jpg"], "stock": { "M": 2, "L": 3, "XL": 1 } },
-       { "color": "Beige", "colorHex": "#D9C3A0", "photos": ["beige-1.jpg"],               "stock": { "S": 1, "M": 2, "L": 0 } }
-     ]
-   }
-   ```
+Pour retrouver une commande, tape la référence (`QG-…`), le numéro ou le nom dans la recherche.
+Les ventes en boutique, sur Instagram ou par téléphone se saisissent avec **Saisir une commande**.
 
-   | Champ | Valeurs |
-   |---|---|
-   | `category` | `hoodies`, `ensembles`, `joggings`, `tshirts`, `maillots`, `chemises`, `accessoires` |
-   | `price` / `oldPrice` | En FCFA, nombre entier sans espace. `oldPrice` (facultatif) = ancien prix barré |
-   | `condition` | Affiché tel quel : doit être exact (« Neuf avec étiquette », « Neuf sans étiquette »…) |
-   | `stock` | Tailles `XS`, `S`, `M`, `L`, `XL`, `XXL`, ou `TU` (taille unique). `0` = rupture |
-   | `colorHex` | Couleur de la pastille (prends-la sur une photo avec une pipette, ex. https://imagecolorpicker.com) |
-   | `slug` | Facultatif : généré à partir du nom (`hoodie-oversize-brode`) |
-   | `brandLabel` | Facultatif : marque, mentionnée de façon factuelle |
-   | `dropId` | Facultatif : rattache le produit à un drop de `data/drops.ts` |
-   | `isNew` | Facultatif : badge « Nouveau » (activé par défaut) |
+### Les pages
 
-   Avec une seule couleur, tu peux omettre `photos` : toutes les photos du dossier sont utilisées.
+| Page | Contenu |
+|---|---|
+| Accueil | Chiffres du jour et du mois, commandes à traiter, alertes de stock |
+| Commandes | Liste filtrable (à traiter, non payées, par origine…), fiche détaillée avec historique et notes |
+| Clients | Fichier clients créé automatiquement à partir des commandes (numéro, quartier, total dépensé, notes) |
+| Produits | Ajout / modification des produits, photos, tailles et **stock** (modifiable directement dans la liste) |
+| Analyses | Chiffre d'affaires, panier moyen, taux de confirmation, meilleures ventes, tailles, zones, origines, meilleurs clients (7 j, 30 j, 90 j, 12 mois) |
+| Réglages | Équipe (inviter quelqu'un), mot de passe, alerte Telegram, publication du site |
 
-4. **Vérifie**, puis **ajoute** :
+### Ajouter un produit
 
+1. **Produits → Ajouter un produit.**
+2. Nom, catégorie, prix, état, description ; puis une ligne par coloris avec ses **photos** (prises directement depuis le téléphone, elles sont réduites automatiquement) et le **stock par taille**.
+3. Coche **Publié**, enregistre.
+4. **Réglages → Publier le site** pour que la fiche produit apparaisse sur le site (environ 2 minutes).
+
+Le **stock** et les **prix** sont lus en direct par le site : les modifier ne demande pas de publication. Les nouveaux produits, photos et textes, eux, en demandent une.
+
+Les drops se règlent toujours dans `data/drops.ts` (image de couverture `public/drops/<id>.webp` + `<id>-sm.webp`).
+
+### Accès et équipe
+
+- Le **premier compte** se crée depuis l'ordinateur, une seule fois (le mot de passe est demandé de façon masquée) :
+  ```bash
+  npm run admin:create -- --remote
+  ```
+- Ensuite, **Réglages → Équipe → Inviter** : un mot de passe provisoire s'affiche, à transmettre à la personne. Elle devra le changer à sa première connexion. Tout le monde a les mêmes droits.
+- Une personne qui part : **Désactiver** (ses sessions sont coupées immédiatement).
+
+### Alerte Telegram à chaque nouvelle commande (facultatif)
+
+1. Sur Telegram, ouvre **@BotFather** → `/newbot` → choisis un nom. Il te donne un **jeton**.
+2. Envoie un message quelconque à ton nouveau bot, puis ouvre `https://api.telegram.org/bot<JETON>/getUpdates` dans le navigateur : le nombre après `"chat":{"id":` est ton **chat id**. (Pour un groupe : ajoute le bot au groupe et écris dans le groupe ; l'id commence par `-`.)
+3. Enregistre-les dans Cloudflare (chaque commande demande la valeur : colle-la) :
    ```bash
-   npm run add-product -- imports/hoodie-noir --dry-run
-   npm run add-product -- imports/hoodie-noir
+   npx wrangler secret put TELEGRAM_BOT_TOKEN
+   ```
+   ```bash
+   npx wrangler secret put TELEGRAM_CHAT_ID
+   ```
+4. **Réglages → Envoyer un test**.
+
+### Publication automatique (bouton « Publier le site »)
+
+Le bouton lance le workflow GitHub `.github/workflows/deploy.yml` (récupère le catalogue, construit, déploie). Un push sur `main` le lance aussi.
+
+1. **Jeton Cloudflare** : https://dash.cloudflare.com/profile/api-tokens → *Create Token* → modèle **Edit Cloudflare Workers**, en ajoutant la permission **Account → D1 → Edit**. Note aussi ton **Account ID** (page Workers & Pages, colonne de droite).
+2. Sur GitHub, dépôt → **Settings → Secrets and variables → Actions → New repository secret** : `CLOUDFLARE_API_TOKEN` et `CLOUDFLARE_ACCOUNT_ID`.
+3. **Jeton GitHub** pour le bouton : https://github.com/settings/personal-access-tokens → *Fine-grained token* → accès au seul dépôt `le-qg` → permission **Actions : Read and write**. Puis :
+   ```bash
+   npx wrangler secret put GITHUB_TOKEN
    ```
 
-   Le script convertit les photos en WebP (1200 px + 600 px pour les mobiles), corrige l'orientation, les range dans `public/products/<slug>/`, crée l'aperçu de partage WhatsApp (`og.jpg`) et ajoute le produit dans `data/products.ts`.
-   Il refuse un slug déjà existant et explique chaque erreur du JSON.
-
-5. **Mettre à jour un stock** : ouvre `data/products.ts`, cherche le produit et change le chiffre (ex. `"M": 2` → `"M": 0`).
-
-6. **Publie** (section 5).
-
-### Ajouter un drop
-
-Ajoute une entrée dans `data/drops.ts` et une image de couverture `public/drops/<id>.webp` + `<id>-sm.webp`.
-`npm run placeholders` génère une couverture provisoire pour tout drop qui n'en a pas.
+Sans ces réglages, `npm run deploy` depuis l'ordinateur fait la même chose.
 
 ---
 
@@ -105,7 +120,7 @@ Ajoute une entrée dans `data/drops.ts` et une image de couverture `public/drops
 npm run check
 ```
 
-Lance le lint, la vérification TypeScript, les tests (message WhatsApp, prix, filtres, panier, données, contrastes) et le build. Tout doit être vert.
+Lance le lint, la vérification TypeScript (site et Worker), les tests (message WhatsApp, prix, filtres, panier, données, contrastes, commandes, stock, analyses, mots de passe) et le build. Tout doit être vert.
 
 ---
 
@@ -113,27 +128,31 @@ Lance le lint, la vérification TypeScript, les tests (message WhatsApp, prix, f
 
 ### Option A — Cloudflare (actuel)
 
-Le site est en ligne sur **https://le-qg.junior-cherif.workers.dev** (Cloudflare Workers, fichiers statiques, gratuit).
+Le site est en ligne sur **https://le-qg.junior-cherif.workers.dev** (Cloudflare Workers + D1 + KV, offre gratuite).
 
 1. Après une modification (produit, réglage…), lance :
    ```bash
    npm run deploy
    ```
-   Ça construit le site et l’envoie en ligne (environ 1 minute). Pour tout vérifier avant : `npm run check`.
+   Ça récupère le catalogue du dashboard, construit le site, met la base à jour et envoie le tout en ligne (environ 1 minute). Pour tout vérifier avant : `npm run check`.
 2. Si Cloudflare demande de se reconnecter : `npx wrangler login`, puis clique sur **Allow** dans le navigateur.
 3. L'adresse publique utilisée pour le sitemap et les aperçus WhatsApp est dans `.env.production` (`NEXT_PUBLIC_SITE_URL`).
 4. Nom de domaine (`leqg.sn`…) : tableau de bord Cloudflare → **Workers & Pages → le-qg → Settings → Domains & Routes → Add → Custom domain**, puis mets la nouvelle adresse dans `.env.production` et relance `npm run deploy`.
 
-Réglages : `wrangler.jsonc` (dossier `out/`, page 404) et `public/_headers` (cache, sécurité).
+Réglages : `wrangler.jsonc` (dossier `out/`, base D1, photos dans KV, tâche quotidienne) et `public/_headers` (cache, sécurité).
 
-### Option B — Vercel (alternative, déploiement automatique depuis GitHub)
+Base de données : `npm run db:migrate` applique les migrations (`migrations/`) ; `npm run db:seed` copie `data/catalog.json` dans la base (une seule fois, au départ).
+
+> Les options B et C n'hébergent que la vitrine : le dashboard, l'enregistrement des commandes et le stock en direct ont besoin de Cloudflare (Worker + D1).
+
+### Option B — Vercel (vitrine seule)
 
 1. Mets le projet sur GitHub.
 2. Sur https://vercel.com → **Add New… → Project** → importe le dépôt → **Deploy**. Aucun réglage à changer.
 3. Chaque `git push` remet le site à jour automatiquement (environ 1 minute).
 4. Nom de domaine (`leqg.sn`…) : **Settings → Domains** du projet, puis ajoute dans *Environment Variables* `NEXT_PUBLIC_SITE_URL = https://leqg.sn` (pour les liens de partage et le sitemap) et redéploie.
 
-### Option C — Hostinger (hébergement web classique)
+### Option C — Hostinger (vitrine seule)
 
 1. Dans `data/site.ts`, rien à changer. Lance avec l'adresse finale du site :
    ```bash
@@ -150,20 +169,32 @@ Tester le résultat statique en local : `npm run build` puis `npm start`.
 ## 6. Organisation du code
 
 ```
-app/            pages (accueil, shop, product/[slug], drops, panier, notre-histoire, infos, 404, sitemap, robots, manifest)
-components/     brand (logo, guirlande, icônes), layout (header, footer, WhatsApp flottant), product, shop, cart, home, ui
-data/           site.ts (réglages), products.ts, drops.ts, categories.ts
-lib/            catalog.ts (SEUL accès aux données), whatsapp.ts, format.ts, filters.ts, cart.ts, cart-store.ts, storage.ts
-scripts/        add-product.ts, generate-brand.ts, generate-placeholders.ts
+app/(site)/     pages publiques (accueil, shop, product/[slug], drops, panier, notre-histoire, infos)
+app/admin/      dashboard (connexion, commandes, clients, produits, analyses, réglages)
+components/     brand, layout, product, shop, cart, home, ui, admin
+data/           site.ts (réglages), catalog.json (instantané du catalogue), drops.ts, categories.ts
+lib/            catalog.ts, whatsapp.ts, orders.ts (statuts, stock), analytics.ts, order-capture.ts, admin/
+worker/         API Cloudflare : index.ts (routes), auth, orders, products, customers, media, analytics, notify, publish
+migrations/     schéma de la base D1
+scripts/        catalog-pull, catalog-seed, create-admin, generate-brand, generate-placeholders
 tests/          tests Vitest
-public/brand/   logos fournis (logo-*.png) + versions détourées générées
 ```
 
-- **Logos** : `public/brand/logo-wordmark.png`, `logo-icon.png`, `logo-badge.png`. Après un changement de logo : `npm run brand` (versions détourées, favicons, icônes PWA, image de partage). Pour passer à des SVG, change les chemins dans `components/brand/Logo.tsx`.
 - **Message WhatsApp** : une seule fonction, `buildWhatsAppMessage()` dans `lib/whatsapp.ts`, utilisée par la fiche produit et le panier.
 - **Panier** : stocké dans le navigateur (`localStorage`), avec repli en mémoire si le stockage est bloqué (navigation privée).
+- **Catalogue** : la base D1 fait foi. Avant chaque build, `npm run catalog:pull` l'écrit dans `data/catalog.json` et les pages sont générées à partir de ce fichier. Stock et prix sont ensuite rafraîchis en direct par `/api/stock`.
+- **Sécurité** : mots de passe hachés (PBKDF2), session en cookie HttpOnly, vérification d'origine sur toutes les écritures, limitation des tentatives de connexion et des commandes par IP.
 
-### Préparé pour la v2 (back-office + Supabase)
+### Travailler sur le dashboard en local
 
-Les pages ne lisent jamais `data/` directement : tout passe par les fonctions asynchrones de `lib/catalog.ts`.
-Pour brancher Supabase, il suffira de réécrire ces fonctions (et de passer à un rendu serveur pour le stock en temps réel) sans toucher aux pages ni aux composants.
+```bash
+npm run db:migrate:local
+```
+```bash
+npm run db:seed:local
+```
+```bash
+npm run admin:create -- --local
+```
+
+Puis, dans deux terminaux : `npm run dev:api` (API sur le port 8787) et `npm run dev` (site sur le port 3000, qui renvoie `/api` vers l'API). Le fichier `.dev.vars` (non versionné) contient `DEV_ORIGIN=http://localhost:3000`.

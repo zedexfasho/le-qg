@@ -12,6 +12,7 @@ import { cart } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/format";
 import { defaultVariantIndex, isVariantInStock, sizesOf, stockOf } from "@/lib/product";
 import type { Product, Size, Variant } from "@/lib/types";
+import { registerOrder, useLiveProduct, useOrderRef } from "@/lib/order-capture";
 import { buildWhatsAppMessage, buildWhatsAppUrl, restockMessage } from "@/lib/whatsapp";
 
 /** Taille présélectionnée : seulement s'il n'y a qu'un choix possible (ex. taille unique) */
@@ -20,7 +21,10 @@ function autoSize(variant: Variant): Size | undefined {
   return available.length === 1 ? available[0] : undefined;
 }
 
-export function ProductDetail({ product }: { product: Product }) {
+export function ProductDetail({ product: staticProduct }: { product: Product }) {
+  // Stock et prix en direct (le site statique peut avoir quelques minutes de retard)
+  const product = useLiveProduct(staticProduct);
+  const getRef = useOrderRef();
   const [variantIndex, setVariantIndex] = useState(() => defaultVariantIndex(product));
   const variant = product.variants[variantIndex];
   const [size, setSize] = useState<Size | undefined>(() => (variant ? autoSize(variant) : undefined));
@@ -65,12 +69,19 @@ export function ProductDetail({ product }: { product: Product }) {
       )
     : undefined;
 
-  const requireSize = (event: React.MouseEvent) => {
+  const requireSize = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (!size) {
       event.preventDefault();
       setSizeError(true);
       document.getElementById("size-picker")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
     }
+    // Référence ajoutée au message + commande enregistrée pour le dashboard
+    const ref = getRef();
+    event.currentTarget.href = buildWhatsAppUrl(
+      buildWhatsAppMessage([{ name: product.name, color: variant.color, size, qty, unitPrice: product.price }], { reference: ref }),
+    );
+    registerOrder(ref, [{ slug: product.slug, color: variant.color, size, qty }]);
   };
 
   const addToCart = () => {

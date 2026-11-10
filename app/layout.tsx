@@ -1,8 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Fredoka, Inter } from "next/font/google";
-import { Footer } from "@/components/layout/Footer";
-import { Header } from "@/components/layout/Header";
-import { WhatsAppFloat } from "@/components/layout/WhatsAppFloat";
 import { site } from "@/data/site";
 import { pageMetadata } from "@/lib/seo";
 import "./globals.css";
@@ -39,17 +36,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className={`${fredoka.variable} ${inter.variable} antialiased`}>
-      <body className="flex min-h-dvh flex-col">
-        <a href="#contenu" className="sr-only z-50 rounded-full bg-brown px-4 py-2 text-cream focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
-          Aller au contenu
-        </a>
-        <Header />
-        <main id="contenu" className="flex-1">
-          {children}
-        </main>
-        <Footer />
-        <WhatsAppFloat />
-      </body>
+      <body className="flex min-h-dvh flex-col">{children}</body>
     </html>
   );
 }

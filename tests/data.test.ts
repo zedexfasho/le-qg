@@ -22,6 +22,8 @@ describe("catalogue (data/products.ts)", () => {
   it("toutes les images existent (en 2 tailles)", () => {
     const missing = products
       .flatMap((p) => p.variants.flatMap((v) => v.images))
+      // Les photos ajoutées depuis le dashboard sont stockées en ligne (/media), pas dans public/
+      .filter((src) => !src.startsWith("/media/"))
       .flatMap((src) => [src, src.replace(/\.webp$/, "-sm.webp")])
       .filter((src) => !existsSync(publicFile(src)));
     expect(missing).toEqual([]);

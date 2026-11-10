@@ -8,13 +8,20 @@
     "postbuild": "node scripts/fix-export-segments.mjs",
     "start": "npx serve@14 out",
     "lint": "eslint .",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit && tsc -p worker/tsconfig.json",
     "test": "vitest run",
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
-    "add-product": "tsx scripts/add-product.ts",
     "brand": "tsx scripts/generate-brand.ts",
     "placeholders": "tsx scripts/generate-placeholders.ts",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run catalog:pull && npm run build && wrangler d1 migrations apply le-qg-db --remote && wrangler deploy",
+    "catalog:pull": "tsx scripts/catalog-pull.ts",
+    "db:migrate": "wrangler d1 migrations apply le-qg-db --remote",
+    "db:migrate:local": "wrangler d1 migrations apply le-qg-db --local",
+    "db:seed": "tsx scripts/catalog-seed.ts --remote",
+    "db:seed:local": "tsx scripts/catalog-seed.ts --local",
+    "admin:create": "tsx scripts/create-admin.ts",
+    "dev:api": "wrangler dev --port 8787",
+    "import:photos": "tsx scripts/import-photos.ts"
   },
   "dependencies": {
     "lucide-react": "^1.70.0",

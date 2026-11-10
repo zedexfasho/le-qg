@@ -10,11 +10,15 @@ import { cartTotal, resolveCart, toOrderLines } from "@/lib/cart";
 import { cart, useCart, useHydrated } from "@/lib/cart-store";
 import { formatPrice, formatSize } from "@/lib/format";
 import type { Product } from "@/lib/types";
+import { registerOrder, useLiveProducts, useOrderRef } from "@/lib/order-capture";
 import { buildWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 
-export function CartView({ products }: { products: Product[] }) {
+export function CartView({ products: staticProducts }: { products: Product[] }) {
   const items = useCart();
   const hydrated = useHydrated();
+  // Stock et prix en direct (le site statique peut avoir quelques minutes de retard)
+  const products = useLiveProducts(staticProducts);
+  const getRef = useOrderRef();
 
   // Pendant le chargement, on réserve exactement la place du panier vide (pas de saut de mise en page)
   if (!hydrated || items.length === 0) {
@@ -39,6 +43,16 @@ export function CartView({ products }: { products: Product[] }) {
   const total = cartTotal(orderLines);
   const hasIssues = lines.some((l) => l.status !== "ok");
   const whatsappUrl = orderLines.length ? buildWhatsAppUrl(buildWhatsAppMessage(orderLines)) : undefined;
+
+  // Au clic : référence ajoutée au message + commande enregistrée pour le dashboard
+  const onOrder = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    const ref = getRef();
+    event.currentTarget.href = buildWhatsAppUrl(buildWhatsAppMessage(orderLines, { reference: ref }));
+    registerOrder(
+      ref,
+      lines.filter((l) => l.product && l.status !== "unavailable" && l.qty > 0).map((l) => ({ slug: l.item.slug, color: l.item.color, size: l.item.size, qty: l.qty })),
+    );
+  };
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
@@ -127,7 +141,7 @@ export function CartView({ products }: { products: Product[] }) {
         </dl>
 
         {whatsappUrl ? (
-          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={buttonClasses("whatsapp", "lg", "mt-5 w-full")}>
+          <a href={whatsappUrl} onClick={onOrder} target="_blank" rel="noopener noreferrer" className={buttonClasses("whatsapp", "lg", "mt-5 w-full")}>
             <WhatsAppIcon className="size-5" />
             Commander sur WhatsApp
           </a>

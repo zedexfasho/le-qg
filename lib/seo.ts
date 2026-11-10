@@ -8,7 +8,7 @@ interface PageMeta {
   description?: string;
   /** Chemin de la page, avec slash final (ex. "/shop/") */
   path: string;
-  image?: { url: string; width: number; height: number; alt: string };
+  image?: { url: string; width?: number; height?: number; alt: string };
 }
 
 /** Metadata + Open Graph d'une page (aperçu propre quand le lien est partagé sur WhatsApp) */

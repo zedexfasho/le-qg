@@ -16,7 +16,9 @@ import { DEFAULT_OG, pageMetadata } from "@/lib/seo";
 export const dynamicParams = false;
 
 export async function generateStaticParams() {
-  return (await getProducts()).map((p) => ({ slug: p.slug }));
+  const slugs = (await getProducts()).map((p) => ({ slug: p.slug }));
+  // L'export statique exige au moins une page : catalogue vide → page « introuvable »
+  return slugs.length ? slugs : [{ slug: "aucun-produit" }];
 }
 
 export async function generateMetadata({ params }: PageProps<"/product/[slug]">): Promise<Metadata> {
@@ -25,12 +27,15 @@ export async function generateMetadata({ params }: PageProps<"/product/[slug]">)
   if (!product) return {};
   const og = `/products/${product.slug}/og.jpg`;
   const hasOg = existsSync(path.join(process.cwd(), "public", og));
+  // Produits ajoutés depuis le dashboard : première photo (déjà en ligne sur /media)
+  const firstImage = product.variants[0]?.images[0];
+  const mediaImage = firstImage?.startsWith("/media/") ? { url: firstImage, alt: product.name } : null;
   const colors = product.variants.map((v) => v.color).join(", ");
   return pageMetadata({
     title: product.name,
     description: `${product.name} — ${formatPrice(product.price)}. ${product.condition}. Coloris : ${colors}. Commande sur WhatsApp au QG, Dakar.`,
     path: `/product/${product.slug}/`,
-    image: hasOg ? { url: og, width: 1200, height: 630, alt: product.name } : DEFAULT_OG,
+    image: hasOg ? { url: og, width: 1200, height: 630, alt: product.name } : (mediaImage ?? DEFAULT_OG),
   });
 }
 
