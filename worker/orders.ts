@@ -1,4 +1,5 @@
 import { site } from "@/data/site";
+import { deliveryFeeFor, validateCheckout } from "@/lib/checkout";
 import { formatPrice } from "@/lib/format";
 import { normalizePhone } from "@/lib/phone";
 import {
@@ -149,39 +150,73 @@ export async function publicCreateOrder(request: Request, env: AppEnv, ctx: Exec
   if (!(await rateLimit(env, `order:${clientIp(request)}`, 20, 3600))) {
     throw new HttpError(429, "Trop de commandes envoyées. Réessaie plus tard.");
   }
-  const body = await readJson<{ ref?: unknown; items?: unknown }>(request, 16_000);
+  const body = await readJson<{ ref?: unknown; items?: unknown; checkout?: Record<string, unknown>; website?: unknown }>(request, 16_000);
   const ref = typeof body.ref === "string" ? body.ref : "";
   if (!ORDER_REF_RE.test(ref)) throw new HttpError(400, "Référence invalide.");
   const items = parseItems(body.items);
   if (typeof items === "string") throw new HttpError(400, items);
 
+  // Commande directe (formulaire du site) : coordonnées du client vérifiées
+  const direct = body.checkout !== undefined;
+  // Champ invisible rempli = robot : on fait comme si tout allait bien, sans rien enregistrer
+  if (direct && typeof body.website === "string" && body.website.trim()) return json({ ok: true, ref }, 201);
+  const checkout = direct ? validateCheckout(body.checkout ?? {}) : null;
+  if (checkout && !checkout.data) throw new HttpError(400, "Vérifie les informations du formulaire.", { fields: checkout.errors });
+
   const stored = await loadProducts(env, { publishedOnly: true, slugs: [...new Set(items.map((i) => i.slug))] });
   const lines = priceItems(items, stored.map((s) => s.product)).filter((l) => l.issue !== "produit_introuvable" && l.issue !== "couleur_introuvable" && l.issue !== "taille_introuvable");
   if (!lines.length) throw new HttpError(400, "Aucun article de la commande n'est disponible.");
-  const { subtotal, total } = orderTotals(lines);
+  if (direct) {
+    const shortages = lines.filter((l) => l.issue === "stock_insuffisant").map((l) => ({ name: l.name, color: l.color, size: l.size, stock: l.stock }));
+    if (shortages.length) throw new HttpError(409, "Un article n'est plus disponible en quantité suffisante.", { shortages });
+  }
+  const { subtotal } = orderTotals(lines);
+
+  // Coordonnées (commande directe uniquement)
+  const data = checkout?.data ?? null;
+  const customer = data ? await upsertCustomer(env, { phone: data.phone, name: data.name, district: data.district, zone: data.zone }) : null;
+  const deliveryFee = data ? (deliveryFeeFor(data.zone) ?? 0) : 0;
+  const total = subtotal + deliveryFee;
+  const clientNote = data?.note ? `Message du client : ${data.note}` : null;
+  const contact = data
+    ? {
+        sql: "customer_id = ?, customer_name = ?, customer_phone = ?, district = ?, delivery_zone = ?, delivery_fee = ?, payment_method = ?, notes = ?, ",
+        params: [customer?.id ?? null, data.name, data.phone, data.district, data.zone, deliveryFee, data.payment, clientNote],
+      }
+    : { sql: "", params: [] };
 
   const existing = await env.DB.prepare("SELECT id, status, source, created_at FROM orders WHERE ref = ?").bind(ref).first<Pick<OrderRow, "id" | "status" | "source" | "created_at">>();
   if (existing) {
     const recent = Date.now() - Date.parse(existing.created_at) < 86_400_000;
     if (existing.source !== "site" || existing.status !== "nouvelle" || !recent) {
+      // Commande déjà prise en charge : on ne la modifie plus depuis le site
+      if (direct) throw new HttpError(409, "Cette commande a déjà été envoyée. Recharge la page pour en passer une nouvelle.");
       return json({ ok: true, ref, ignored: true });
     }
     await env.DB.batch([
       env.DB.prepare("DELETE FROM order_items WHERE order_id = ?").bind(existing.id),
       ...lines.map((l) => itemInsert(env, { id: existing.id }, l)),
-      env.DB.prepare("UPDATE orders SET subtotal = ?, total = ?, updated_at = ? WHERE id = ?").bind(subtotal, total, nowIso(), existing.id),
-      eventInsert(env, { id: existing.id }, "articles_modifies", { note: "Le client a renvoyé sa commande depuis le site" }),
+      env.DB.prepare(`UPDATE orders SET ${contact.sql}subtotal = ?, total = ?, updated_at = ? WHERE id = ?`).bind(...contact.params, subtotal, total, nowIso(), existing.id),
+      eventInsert(env, { id: existing.id }, direct ? "formulaire" : "articles_modifies", {
+        note: direct ? "Le client a complété sa commande avec le formulaire du site" : "Le client a renvoyé sa commande depuis le site",
+      }),
     ]);
-    return json({ ok: true, ref, updated: true });
+    if (direct) ctx.waitUntil(notifyNewOrder(env, { ref, lines, total, source: "site", customer: data }).catch((e) => console.error("telegram", e)));
+    return json({ ok: true, ref, total, deliveryFee, updated: true });
   }
 
   await env.DB.batch([
-    env.DB.prepare("INSERT INTO orders (ref, status, source, subtotal, total) VALUES (?, 'nouvelle', 'site', ?, ?)").bind(ref, subtotal, total),
+    data
+      ? env.DB.prepare(
+          `INSERT INTO orders (ref, status, source, customer_id, customer_name, customer_phone, district, delivery_zone, delivery_fee, payment_method, notes, subtotal, total)
+           VALUES (?, 'nouvelle', 'site', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(ref, ...contact.params, subtotal, total)
+      : env.DB.prepare("INSERT INTO orders (ref, status, source, subtotal, total) VALUES (?, 'nouvelle', 'site', ?, ?)").bind(ref, subtotal, total),
     ...lines.map((l) => itemInsert(env, { ref }, l)),
-    eventInsert(env, { ref }, "creation", { to: "nouvelle", note: "Commande envoyée depuis le site (WhatsApp)" }),
+    eventInsert(env, { ref }, "creation", { to: "nouvelle", note: direct ? "Commande passée avec le formulaire du site" : "Commande envoyée depuis le site (WhatsApp)" }),
   ]);
-  ctx.waitUntil(notifyNewOrder(env, { ref, lines, total, source: "site" }).catch((e) => console.error("telegram", e)));
-  return json({ ok: true, ref }, 201);
+  ctx.waitUntil(notifyNewOrder(env, { ref, lines, total, source: "site", customer: data }).catch((e) => console.error("telegram", e)));
+  return json({ ok: true, ref, total, deliveryFee }, 201);
 }
 
 /* ------------------------------ Clients ------------------------------ */

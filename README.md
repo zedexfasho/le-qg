@@ -17,11 +17,11 @@ Tout se règle dans **`data/site.ts`** :
 |---|---|
 | `whatsapp` | Ton numéro de commande, ex. `"+221 77 123 45 67"`. **Obligatoire** : tant qu'il est vide, WhatsApp s'ouvre sans destinataire. |
 | `socials` | Tes comptes Instagram / Snapchat / TikTok, sans le `@` (vide = lien masqué). |
-| `delivery` | Tes tarifs de livraison par zone (`price: 1500`…). `null` affiche « Tarif confirmé sur WhatsApp ». |
+| `delivery` | Tes tarifs de livraison par zone (`price: 1500`…). Ils s'affichent sur la page Infos **et dans le formulaire de commande**, et sont ajoutés au total des commandes passées sur le site. `null` = « Tarif à confirmer » (frais à 0, tu les règles dans la commande). |
 | `exchangePolicy` | Ta vraie politique d'échange (le texte actuel est un exemple). |
 | `story` | Le texte de « Notre histoire » (brouillon à remplacer). |
 
-Ensuite, dans le dashboard (**Produits**), dépublie ou supprime les **8 produits d'exemple** et ajoute tes vrais produits (section 3).
+Ensuite, dans le dashboard (**Produits**), complète et publie tes produits (section 3).
 
 Le guide des tailles (mesures indicatives) se modifie dans `components/product/SizeGuide.tsx`.
 
@@ -46,11 +46,18 @@ Adresse : **https://le-qg.junior-cherif.workers.dev/admin/** (non référencée 
 
 ### Comment arrivent les commandes
 
-1. Le client clique sur « Commander sur WhatsApp » (fiche produit ou panier).
-2. Le site enregistre la commande **et** ajoute une référence au message WhatsApp : « Je veux commander (réf. QG-7K2M9QX) ».
-3. La commande apparaît dans **Commandes → À traiter** avec le statut **Nouvelle**. Si le client n'envoie jamais le message, elle passe en **Sans suite** après 3 jours.
-4. Tu discutes avec le client sur WhatsApp, puis dans la commande : **Confirmer** (le stock est déduit) → **En livraison** → **Livrée**, et **Marquer payée**. Un bouton prépare le message WhatsApp adapté à chaque étape.
-5. **Annuler** remet le stock en place.
+Le client a deux boutons, sur la fiche produit et dans le panier :
+
+- **« Commander sur le site »** (sans WhatsApp) : un formulaire demande nom, numéro, zone, adresse, moyen de paiement et un message facultatif. Rien n'est payé en ligne. La commande arrive **complète** dans le dashboard (client, zone, frais de livraison, paiement, message dans la note), la fiche client est créée, le panier se vide et le client voit sa référence. Si un article n'a plus assez de stock, le formulaire le dit avant l'envoi.
+- **« Commander sur WhatsApp »** : le site enregistre la commande **et** ajoute une référence au message WhatsApp : « Je veux commander (réf. QG-7K2M9QX) ». Tu complètes les coordonnées dans la commande. Si le client n'envoie jamais le message, elle passe en **Sans suite** après 3 jours.
+
+Ensuite, dans les deux cas :
+
+1. La commande apparaît dans **Commandes → À traiter** avec le statut **Nouvelle** (et une alerte Telegram si elle est réglée). L'historique indique « Commande passée avec le formulaire du site » ou « (WhatsApp) ».
+2. Tu appelles ou écris au client pour confirmer, puis dans la commande : **Confirmer** (le stock est déduit) → **En livraison** → **Livrée**, et **Marquer payée**. Un bouton prépare le message WhatsApp adapté à chaque étape.
+3. **Annuler** remet le stock en place.
+
+Le formulaire est protégé contre les robots (champ invisible) et limité à 20 commandes par heure et par connexion. Le client peut cocher « Mémoriser mes coordonnées » : elles restent alors sur son téléphone uniquement.
 
 Pour retrouver une commande, tape la référence (`QG-…`), le numéro ou le nom dans la recherche.
 Les ventes en boutique, sur Instagram ou par téléphone se saisissent avec **Saisir une commande**.
@@ -171,9 +178,9 @@ Tester le résultat statique en local : `npm run build` puis `npm start`.
 ```
 app/(site)/     pages publiques (accueil, shop, product/[slug], drops, panier, notre-histoire, infos)
 app/admin/      dashboard (connexion, commandes, clients, produits, analyses, réglages)
-components/     brand, layout, product, shop, cart, home, ui, admin
+components/     brand, layout, product, shop, cart, checkout, home, ui, admin
 data/           site.ts (réglages), catalog.json (instantané du catalogue), drops.ts, categories.ts
-lib/            catalog.ts, whatsapp.ts, orders.ts (statuts, stock), analytics.ts, order-capture.ts, admin/
+lib/            catalog.ts, whatsapp.ts, orders.ts (statuts, stock), checkout.ts (formulaire de commande), analytics.ts, order-capture.ts, admin/
 worker/         API Cloudflare : index.ts (routes), auth, orders, products, customers, media, analytics, notify, publish
 migrations/     schéma de la base D1
 scripts/        catalog-pull, catalog-seed, create-admin, generate-brand, generate-placeholders
@@ -181,6 +188,7 @@ tests/          tests Vitest
 ```
 
 - **Message WhatsApp** : une seule fonction, `buildWhatsAppMessage()` dans `lib/whatsapp.ts`, utilisée par la fiche produit et le panier.
+- **Formulaire de commande** : les règles (`validateCheckout()` dans `lib/checkout.ts`) sont partagées par la page et par l'API, qui revérifie tout (prix, stock, coordonnées).
 - **Panier** : stocké dans le navigateur (`localStorage`), avec repli en mémoire si le stockage est bloqué (navigation privée).
 - **Catalogue** : la base D1 fait foi. Avant chaque build, `npm run catalog:pull` l'écrit dans `data/catalog.json` et les pages sont générées à partir de ce fichier. Stock et prix sont ensuite rafraîchis en direct par `/api/stock`.
 - **Sécurité** : mots de passe hachés (PBKDF2), session en cookie HttpOnly, vérification d'origine sur toutes les écritures, limitation des tentatives de connexion et des commandes par IP.

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CheckoutErrors, CheckoutFields } from "./checkout";
 import { generateOrderRef, type OrderItemInput } from "./orders";
-import type { Product } from "./types";
+import type { Product, Size } from "./types";
 
 /**
  * Enregistrement des commandes du site, sans rien changer pour le client :
@@ -84,4 +85,47 @@ function useLiveData() {
     };
   }, []);
   return live;
+}
+
+/* ---------------------- Commande directe (formulaire) ---------------------- */
+
+export interface DirectOrderSuccess {
+  ok: true;
+  ref: string;
+  total: number;
+  deliveryFee: number;
+}
+
+export interface DirectOrderFailure {
+  ok: false;
+  error: string;
+  fields?: CheckoutErrors;
+  shortages?: { name: string; color: string; size: Size; stock: number }[];
+}
+
+/** Envoie la commande complète (coordonnées comprises). Contrairement à WhatsApp, on attend la réponse. */
+export async function submitDirectOrder(
+  ref: string,
+  items: readonly OrderItemInput[],
+  checkout: CheckoutFields,
+  website = "",
+): Promise<DirectOrderSuccess | DirectOrderFailure> {
+  let res: Response;
+  try {
+    res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ref, items, checkout, website }),
+    });
+  } catch {
+    return { ok: false, error: "Pas de connexion internet. Vérifie ton réseau et réessaie." };
+  }
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (res.ok) return { ok: true, ref, total: Number(data.total ?? 0), deliveryFee: Number(data.deliveryFee ?? 0) };
+  return {
+    ok: false,
+    error: typeof data.error === "string" ? data.error : "La commande n'a pas pu être envoyée. Réessaie dans un instant.",
+    fields: data.fields as CheckoutErrors | undefined,
+    shortages: data.shortages as DirectOrderFailure["shortages"],
+  };
 }
