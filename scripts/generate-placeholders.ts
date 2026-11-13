@@ -1,15 +1,14 @@
 /**
  * Génère des images d'EXEMPLE neutres (fond sable, silhouette de vêtement dans la
  * couleur de la variante, cintre) pour chaque image référencée dans data/products.ts
- * et data/drops.ts — uniquement si le fichier n'existe pas déjà.
+ * et les drops du catalogue — uniquement si le fichier n'existe pas déjà (les photos /media sont ignorées).
  *
  * Usage : npm run placeholders          (ne remplace rien)
  *         npm run placeholders -- --force (régénère tout)
  */
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { drops } from "../data/drops";
-import { products } from "../data/products";
+import { drops, products } from "../data/products";
 import type { Category } from "../lib/types";
 import { writeProductOg, writeResponsiveWebp } from "./lib/images";
 
@@ -147,7 +146,7 @@ async function main() {
   }
 
   for (const [i, drop] of drops.entries()) {
-    if (await writeIfMissing(drop.cover, dropSvg(i))) count++;
+    if (drop.cover?.startsWith("/drops/") && (await writeIfMissing(drop.cover, dropSvg(i)))) count++;
   }
 
   console.log(`✓ ${count} image(s) d'exemple générée(s).`);

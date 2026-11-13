@@ -1,5 +1,5 @@
 import type { OrderSource, OrderStatus, PaymentMethod } from "@/lib/orders";
-import type { Product, Size } from "@/lib/types";
+import type { Drop, Product, Size } from "@/lib/types";
 
 /** Formes des données renvoyées par l'API du dashboard */
 
@@ -88,3 +88,6 @@ export interface Shortage {
 }
 
 export type AdminProduct = Product & { published: boolean; updatedAt: string };
+
+/** Drop vu du dashboard : avec le nombre de produits rattachés */
+export type AdminDrop = Drop & { products: number; publishedProducts: number };

@@ -6,6 +6,7 @@ import { ProductGrid } from "@/components/product/ProductGrid";
 import { ProductImage } from "@/components/product/ProductImage";
 import { buttonClasses, containerClasses } from "@/components/ui/styles";
 import { getDrop, getDropProducts, getDrops } from "@/lib/catalog";
+import { DEFAULT_DROP_COVER } from "@/lib/drops";
 import { formatDate } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
 
@@ -45,7 +46,7 @@ export default async function DropPage({ params }: PageProps<"/drops/[id]">) {
             {drop.description && <p className="mt-3 max-w-md text-lg font-medium">{drop.description}</p>}
           </div>
           <div className="relative aspect-[3/2] overflow-hidden rounded-3xl shadow-warm-lg">
-            <ProductImage src={drop.cover} alt={drop.title} fill preload sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+            <ProductImage src={drop.cover ?? DEFAULT_DROP_COVER} alt={drop.title} fill preload sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
           </div>
         </div>
       </section>

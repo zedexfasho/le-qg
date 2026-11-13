@@ -66,7 +66,7 @@ const NAV = [
   { href: "/admin/", label: "Accueil", icon: Home, match: (p: string) => p === "/admin/" },
   { href: "/admin/commandes/", label: "Commandes", icon: ShoppingBag, match: (p: string) => p.startsWith("/admin/commande") },
   { href: "/admin/clients/", label: "Clients", icon: Users, match: (p: string) => p.startsWith("/admin/client") },
-  { href: "/admin/produits/", label: "Produits", icon: Package, match: (p: string) => p.startsWith("/admin/produit") },
+  { href: "/admin/produits/", label: "Produits", icon: Package, match: (p: string) => /^\/admin\/(produit|drop|demandes)/.test(p) },
   { href: "/admin/analyses/", label: "Analyses", icon: BarChart3, match: (p: string) => p.startsWith("/admin/analyses") },
   { href: "/admin/reglages/", label: "Réglages", icon: Settings, match: (p: string) => p.startsWith("/admin/reglages") },
 ];

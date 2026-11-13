@@ -66,10 +66,10 @@ Les ventes en boutique, sur Instagram ou par téléphone se saisissent avec **Sa
 
 | Page | Contenu |
 |---|---|
-| Accueil | Chiffres du jour et du mois, commandes à traiter, alertes de stock |
+| Accueil | Chiffres du jour et du mois, commandes à traiter, alertes de stock, clients à prévenir d'un retour en stock |
 | Commandes | Liste filtrable (à traiter, non payées, par origine…), fiche détaillée avec historique et notes. Une **pastille** sur le menu (et dans l'onglet du navigateur) compte les commandes à confirmer ; elle et les listes se mettent à jour toutes seules (toutes les 45 s) quand une commande arrive. |
 | Clients | Fichier clients créé automatiquement à partir des commandes (numéro, quartier, total dépensé, notes) |
-| Produits | Ajout / modification des produits, photos, tailles et **stock** (modifiable directement dans la liste) |
+| Produits | Ajout / modification des produits, photos, tailles et **stock** (modifiable directement dans la liste). Onglets **Drops** (arrivages) et **Demandes de retour** (clients à prévenir) |
 | Analyses | Chiffre d'affaires, panier moyen, taux de confirmation, meilleures ventes, tailles, zones, origines, meilleurs clients (7 j, 30 j, 90 j, 12 mois) |
 | Réglages | Équipe (inviter quelqu'un), mot de passe, alerte Telegram, publication du site |
 
@@ -82,7 +82,17 @@ Les ventes en boutique, sur Instagram ou par téléphone se saisissent avec **Sa
 
 Le **stock** et les **prix** sont lus en direct par le site : les modifier ne demande pas de publication. Les nouveaux produits, photos et textes, eux, en demandent une.
 
-Les drops se règlent toujours dans `data/drops.ts` (image de couverture `public/drops/<id>.webp` + `<id>-sm.webp`). Un drop n'apparaît sur le site que lorsqu'au moins un produit publié lui est rattaché (champ « Drop » de la fiche produit) : les drops d'exemple restent donc invisibles.
+### Les drops (arrivages)
+
+**Produits → Drops → Nouveau drop** : nom, date de l'arrivage, description et photo de couverture (prise depuis le téléphone, sinon une image par défaut). Rattache ensuite des produits au drop (champ « Drop » de la fiche produit), puis **Publier le site**. Un drop n'apparaît sur le site que lorsqu'au moins un produit publié lui est rattaché. Supprimer un drop ne supprime pas ses produits : ils sont simplement détachés.
+
+### « Me prévenir du retour »
+
+Quand une couleur ou une taille est épuisée, le client laisse son numéro WhatsApp (et son prénom s'il veut) sur la fiche produit. Les demandes arrivent dans **Produits → Demandes de retour**, regroupées par modèle. Dès que tu remets du stock, la demande passe en vert « De retour » (et l'accueil du dashboard le signale) : **Prévenir** ouvre WhatsApp avec un message prêt (lien de la fiche inclus) et range la demande dans « Traitées ». Une erreur ? **Remettre en attente**.
+
+### Suivi de commande pour le client
+
+Page publique **/suivi/** : le client tape sa référence (`QG-…`) et voit où en est sa commande (reçue → confirmée → en livraison → livrée), ses articles et le total. Aucune donnée personnelle n'y est affichée. Le lien est proposé juste après la commande sur le site, dans le pied de page, et ajouté automatiquement aux messages WhatsApp « confirmée » et « en livraison » du dashboard.
 
 ### Accès et équipe
 
@@ -176,12 +186,12 @@ Tester le résultat statique en local : `npm run build` puis `npm start`.
 ## 6. Organisation du code
 
 ```
-app/(site)/     pages publiques (accueil, shop, product/[slug], drops, panier, notre-histoire, infos)
-app/admin/      dashboard (connexion, commandes, clients, produits, analyses, réglages)
+app/(site)/     pages publiques (accueil, shop, product/[slug], drops, panier, suivi, notre-histoire, infos)
+app/admin/      dashboard (connexion, commandes, clients, produits, drops, demandes, analyses, réglages)
 components/     brand, layout, product, shop, cart, checkout, home, ui, admin
-data/           site.ts (réglages), catalog.json (instantané du catalogue), drops.ts, categories.ts
-lib/            catalog.ts, whatsapp.ts, orders.ts (statuts, stock), checkout.ts (formulaire de commande), analytics.ts, order-capture.ts, admin/
-worker/         API Cloudflare : index.ts (routes), auth, orders, products, customers, media, analytics, notify, publish
+data/           site.ts (réglages), catalog.json (instantané du catalogue : produits + drops), categories.ts
+lib/            catalog.ts, whatsapp.ts, orders.ts (statuts, stock), checkout.ts (formulaire de commande), drops.ts, restock.ts, analytics.ts, order-capture.ts, admin/
+worker/         API Cloudflare : index.ts (routes), auth, orders, products, drops, restock, customers, media, analytics, notify, publish
 migrations/     schéma de la base D1
 scripts/        catalog-pull, catalog-seed, create-admin, generate-brand, generate-placeholders
 tests/          tests Vitest

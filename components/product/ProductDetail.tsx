@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Minus, Plus, Send, ShoppingBag } from "lucide-react";
+import { BellRing, Check, Minus, Plus, Send, ShoppingBag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { WhatsAppIcon } from "@/components/brand/SocialIcons";
 import { CheckoutDialog } from "@/components/checkout/CheckoutForm";
 import { Gallery } from "@/components/product/Gallery";
 import { Price } from "@/components/product/Price";
+import { RestockDialog } from "@/components/product/RestockDialog";
 import { SizeGuide } from "@/components/product/SizeGuide";
 import { buttonClasses } from "@/components/ui/styles";
 import { cart } from "@/lib/cart-store";
@@ -14,7 +15,7 @@ import { formatPrice } from "@/lib/format";
 import { defaultVariantIndex, isVariantInStock, sizesOf, stockOf } from "@/lib/product";
 import type { Product, Size, Variant } from "@/lib/types";
 import { registerOrder, useLiveProduct, useOrderRef } from "@/lib/order-capture";
-import { buildWhatsAppMessage, buildWhatsAppUrl, restockMessage } from "@/lib/whatsapp";
+import { buildWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 
 /** Taille présélectionnée : seulement s'il n'y a qu'un choix possible (ex. taille unique) */
 function autoSize(variant: Variant): Size | undefined {
@@ -33,6 +34,7 @@ export function ProductDetail({ product: staticProduct }: { product: Product }) 
   const [sizeError, setSizeError] = useState(false);
   const [added, setAdded] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [restockOpen, setRestockOpen] = useState(false);
 
   // La barre d'achat mobile remplace le bouton WhatsApp flottant
   useEffect(() => {
@@ -48,6 +50,7 @@ export function ProductDetail({ product: staticProduct }: { product: Product }) 
   const stock = stockOf(variant, size);
   const variantAvailable = isVariantInStock(variant);
   const maxQty = Math.max(1, stock);
+  const soldOutSizes = sizes.filter((s) => stockOf(variant, s) === 0);
 
   const selectVariant = (index: number) => {
     const next = product.variants[index];
@@ -119,14 +122,10 @@ export function ProductDetail({ product: staticProduct }: { product: Product }) 
         {!compact && "Commander sur WhatsApp"}
       </a>
     ) : (
-      <a
-        href={buildWhatsAppUrl(restockMessage(product.name, variant.color))}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={buttonClasses("secondary", "lg", extra)}
-      >
+      <button type="button" onClick={() => setRestockOpen(true)} className={buttonClasses("secondary", "lg", extra)}>
+        <BellRing className="size-5" aria-hidden="true" />
         {compact ? "Me prévenir" : "Me prévenir du retour"}
-      </a>
+      </button>
     );
 
   return (
@@ -220,6 +219,16 @@ export function ProductDetail({ product: staticProduct }: { product: Product }) 
               );
             })}
           </div>
+          {variantAvailable && soldOutSizes.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setRestockOpen(true)}
+              className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold underline underline-offset-4"
+            >
+              <BellRing className="size-4" aria-hidden="true" />
+              Ta taille est épuisée ? Préviens-moi quand elle revient
+            </button>
+          )}
           <p className="mt-2 min-h-5 text-sm" aria-live="polite">
             {sizeError && !size ? (
               <span className="font-semibold text-accent-strong">Choisis ta taille d&apos;abord 👆</span>
@@ -284,7 +293,7 @@ export function ProductDetail({ product: staticProduct }: { product: Product }) 
 
         {!variantAvailable && (
           <p className="mt-2 text-sm text-muted">
-            Cette couleur est épuisée pour le moment. Écris-nous, on te prévient dès qu&apos;elle revient au QG.
+            Cette couleur est épuisée pour le moment. Laisse ton numéro, on te prévient sur WhatsApp dès qu&apos;elle revient au QG.
           </p>
         )}
 
@@ -312,6 +321,15 @@ export function ProductDetail({ product: staticProduct }: { product: Product }) 
           {whatsappButton("shrink-0", true)}
         </div>
       </div>
+
+      <RestockDialog
+        open={restockOpen}
+        onClose={() => setRestockOpen(false)}
+        slug={product.slug}
+        productName={product.name}
+        color={variant.color}
+        soldOutSizes={variantAvailable ? soldOutSizes : sizes.length > 1 ? sizes : []}
+      />
 
       {size && (
         <CheckoutDialog

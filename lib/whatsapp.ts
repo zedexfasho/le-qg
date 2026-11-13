@@ -64,8 +64,3 @@ export function buildWhatsAppUrl(message?: string, phone: string = site.whatsapp
 export function contactMessage(): string {
   return `Salam ${site.name} 👋 J'ai une question :`;
 }
-
-/** Message pour demander le retour d'un article en rupture */
-export function restockMessage(productName: string, color: string): string {
-  return `Salam ${site.name} 👋 Le modèle « ${oneLine(productName)} » en ${oneLine(color)} revient bientôt ? Préviens-moi stp 🙏`;
-}

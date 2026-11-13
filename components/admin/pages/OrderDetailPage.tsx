@@ -51,12 +51,13 @@ function customerMessage(d: Detail): string {
   const o = d.order;
   const hello = `Salam${o.customerName ? ` ${o.customerName}` : ""} 👋`;
   const lines = o.items.map((i) => `• ${i.name} — ${i.color} — ${formatSize(i.size)} — x${i.qty}`).join("\n");
+  const track = `Suivre ta commande : ${site.url}/suivi/?ref=${o.ref}`;
   const total = `Total : ${formatPrice(o.total)}${o.deliveryFee ? ` (dont livraison ${formatPrice(o.deliveryFee)})` : ""}`;
   switch (o.status) {
     case "confirmee":
-      return `${hello}\nTa commande ${o.ref} est confirmée ✅\n${lines}\n${total}\nOn te livre ${o.district ? `à ${o.district} ` : ""}très vite. Merci de passer au QG !`;
+      return `${hello}\nTa commande ${o.ref} est confirmée ✅\n${lines}\n${total}\nOn te livre ${o.district ? `à ${o.district} ` : ""}très vite. Merci de passer au QG !\n${track}`;
     case "en_livraison":
-      return `${hello}\nTa commande ${o.ref} est en route 🛵 Le livreur t'appelle bientôt.\n${total}${o.paid ? "" : `\nPaiement : ${o.paymentMethod ? PAYMENT_LABELS[o.paymentMethod] : site.paymentLine}`}`;
+      return `${hello}\nTa commande ${o.ref} est en route 🛵 Le livreur t'appelle bientôt.\n${total}${o.paid ? "" : `\nPaiement : ${o.paymentMethod ? PAYMENT_LABELS[o.paymentMethod] : site.paymentLine}`}\n${track}`;
     case "livree":
       return `${hello}\nMerci pour ta commande ${o.ref} 🙏 Tout est bon ? Envoie-nous une photo avec ta pièce, on adore !`;
     default:

@@ -27,6 +27,7 @@ import type { User } from "./auth";
 import { HttpError, clientIp, json, nowIso, optInt, optText, rateLimit, readJson, type AppEnv } from "./http";
 import { notifyNewOrder } from "./notify";
 import { loadProducts, stockStatements } from "./products";
+import { restockSummary } from "./restock";
 
 /* ------------------------------ Lecture ------------------------------ */
 
@@ -585,7 +586,7 @@ export async function adminSummary(env: AppEnv): Promise<Response> {
     ).all<OrderRow & { item_count: number }>(),
   ]);
 
-  const products = await loadProducts(env, { publishedOnly: true });
+  const [products, restock] = await Promise.all([loadProducts(env, { publishedOnly: true }), restockSummary(env)]);
   let outOfStock = 0;
   let low = 0;
   for (const { product } of products)
@@ -602,6 +603,7 @@ export async function adminSummary(env: AppEnv): Promise<Response> {
     week: weekRow ?? { received: 0, revenue: 0, validated: 0 },
     recent: recent.results.map((o) => ({ ...orderJson(o), itemCount: o.item_count })),
     stock: { outOfStock, low, products: products.length },
+    restock,
   });
 }
 
@@ -629,3 +631,54 @@ export function orderSummaryLine(lines: readonly { qty: number }[], total: numbe
 }
 
 export const shopName = site.name;
+
+/* ------------------------- Suivi (public) -------------------------- */
+
+/**
+ * Suivi de commande pour le client, à partir de sa référence.
+ * Ne renvoie aucune coordonnée (nom, numéro, adresse) : seulement l'état et le contenu.
+ */
+export async function publicTrackOrder(request: Request, env: AppEnv): Promise<Response> {
+  if (!(await rateLimit(env, `track:${clientIp(request)}`, 30, 600))) {
+    throw new HttpError(429, "Trop de recherches. Réessaie dans quelques minutes.");
+  }
+  const ref = parseOrderRef(new URL(request.url).searchParams.get("ref") ?? "");
+  if (!ref) throw new HttpError(400, "Référence invalide : elle ressemble à QG-7K2M9QX.");
+  const order = await env.DB.prepare(
+    "SELECT id, ref, status, delivery_zone, delivery_fee, subtotal, total, paid, created_at, confirmed_at, delivered_at, cancelled_at FROM orders WHERE ref = ?",
+  )
+    .bind(ref)
+    .first<Pick<OrderRow, "id" | "ref" | "status" | "delivery_zone" | "delivery_fee" | "subtotal" | "total" | "paid" | "created_at" | "confirmed_at" | "delivered_at" | "cancelled_at">>();
+  if (!order) throw new HttpError(404, "Aucune commande avec cette référence. Vérifie-la, ou écris-nous.");
+
+  const [items, shipped] = await Promise.all([
+    env.DB.prepare("SELECT name, color, size, qty, image FROM order_items WHERE order_id = ? ORDER BY id").bind(order.id).all<{
+      name: string;
+      color: string;
+      size: Size;
+      qty: number;
+      image: string | null;
+    }>(),
+    env.DB.prepare("SELECT max(created_at) AS at FROM order_events WHERE order_id = ? AND to_status = 'en_livraison'").bind(order.id).first<{ at: string | null }>(),
+  ]);
+
+  return json(
+    {
+      ref: order.ref,
+      status: order.status,
+      zone: order.delivery_zone,
+      deliveryFee: order.delivery_fee,
+      subtotal: order.subtotal,
+      total: order.total,
+      paid: !!order.paid,
+      createdAt: order.created_at,
+      confirmedAt: order.confirmed_at,
+      shippedAt: shipped?.at ?? null,
+      deliveredAt: order.delivered_at,
+      cancelledAt: order.cancelled_at,
+      items: items.results,
+    },
+    200,
+    { "Cache-Control": "no-store" },
+  );
+}

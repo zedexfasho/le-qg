@@ -1,5 +1,7 @@
 "use client";
 
+import { api } from "./api";
+
 /**
  * Prépare une photo dans le navigateur avant l'envoi :
  * - grande version 1200 px de large, petite version 600 px (petits écrans)
@@ -40,4 +42,15 @@ export async function prepareImage(file: File): Promise<{ full: Blob; small: Blo
   } finally {
     bitmap.close();
   }
+}
+
+/** Prépare la photo puis l'envoie (grande + petite version) ; renvoie son chemin /media/… */
+export async function uploadPhoto(file: File): Promise<string> {
+  const { full, small } = await prepareImage(file);
+  const form = new FormData();
+  const ext = full.type === "image/webp" ? "webp" : "jpg";
+  form.append("full", new File([full], `photo.${ext}`, { type: full.type }));
+  form.append("small", new File([small], `photo-sm.${ext}`, { type: small.type }));
+  const { src } = await api<{ src: string }>("/media", { form });
+  return src;
 }
