@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: PageProps<"/product/[slug]">)
   const colors = product.variants.map((v) => v.color).join(", ");
   return pageMetadata({
     title: product.name,
-    description: `${product.name} — ${formatPrice(product.price)}. ${product.condition}. Coloris : ${colors}. Commande sur WhatsApp au QG, Dakar.`,
+    description: `${product.name} — ${formatPrice(product.price)}. ${product.condition}. Coloris : ${colors}. Commande en ligne ou sur WhatsApp au QG, Dakar.`,
     path: `/product/${product.slug}/`,
     image: hasOg ? { url: og, width: 1200, height: 630, alt: product.name } : (mediaImage ?? DEFAULT_OG),
   });

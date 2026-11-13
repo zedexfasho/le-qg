@@ -553,6 +553,12 @@ export async function adminAddNote(request: Request, env: AppEnv, user: User, id
 
 /* ------------------------- Tableau de bord ------------------------- */
 
+/** Nombre de commandes à confirmer (pastille du menu, interrogée régulièrement : requête légère) */
+export async function adminPendingOrders(env: AppEnv): Promise<Response> {
+  const row = await env.DB.prepare("SELECT count(*) AS n, max(created_at) AS latest FROM orders WHERE status = 'nouvelle'").first<{ n: number; latest: string | null }>();
+  return json({ nouvelles: row?.n ?? 0, latest: row?.latest ?? null });
+}
+
 export async function adminSummary(env: AppEnv): Promise<Response> {
   const today = new Date().toISOString().slice(0, 10);
   const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();

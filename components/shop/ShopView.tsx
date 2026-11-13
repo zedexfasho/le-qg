@@ -179,7 +179,11 @@ export function ShopView({ products, category }: ShopViewProps) {
           <div className="flex flex-col items-center rounded-3xl bg-surface-2 px-6 py-14 text-center">
             <HangerIcon className="mb-4 size-14 text-muted" strokeWidth={1.5} />
             <p className="font-display text-2xl font-bold">Rien ici pour l&apos;instant…</p>
-            <p className="mt-2 max-w-sm text-muted">Essaie d&apos;enlever un filtre, ou repasse bientôt : de nouveaux drops arrivent chaque semaine.</p>
+            <p className="mt-2 max-w-sm text-muted">
+              {active > 0 || state.q
+                ? "Aucune pièce ne correspond. Essaie d'enlever un filtre."
+                : "Les pièces arrivent très bientôt : repasse vite, de nouveaux drops sortent chaque semaine."}
+            </p>
             {(active > 0 || state.q) && (
               <button type="button" onClick={resetAll} className={buttonClasses("primary", "md", "mt-6")}>
                 Effacer les filtres

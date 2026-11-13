@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: PageProps<"/shop/[category]">
   if (!info) return {};
   return pageMetadata({
     title: info.label,
-    description: `${info.label} au QG, Dakar. ${info.blurb} Commande sur WhatsApp, livraison 24h à Dakar.`,
+    description: `${info.label} au QG, Dakar. ${info.blurb} Commande en ligne ou sur WhatsApp, livraison 24h à Dakar.`,
     path: `/shop/${info.id}/`,
   });
 }

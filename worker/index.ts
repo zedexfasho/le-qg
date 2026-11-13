@@ -16,6 +16,7 @@ import {
   adminCreateOrder,
   adminGetOrder,
   adminListOrders,
+  adminPendingOrders,
   adminSummary,
   adminUpdateOrder,
   dailyMaintenance,
@@ -67,6 +68,7 @@ const routes: Route[] = [
   { method: "GET", pattern: /^\/api\/admin\/analytics$/, handler: ({ request, env }) => adminAnalytics(request, env) },
 
   // --- Commandes ---
+  { method: "GET", pattern: /^\/api\/admin\/orders\/pending$/, handler: ({ env }) => adminPendingOrders(env) },
   { method: "GET", pattern: /^\/api\/admin\/orders$/, handler: ({ request, env }) => adminListOrders(request, env) },
   { method: "POST", pattern: /^\/api\/admin\/orders$/, handler: async ({ request, env }) => adminCreateOrder(request, env, await user(request, env)) },
   { method: "GET", pattern: /^\/api\/admin\/orders\/(\d+)$/, handler: ({ env, params }) => adminGetOrder(env, id(params[0])) },
