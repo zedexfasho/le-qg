@@ -36,12 +36,14 @@ export async function getSimilarProducts(product: Product, limit = 4): Promise<P
   return [...sameCategory, ...others].slice(0, limit);
 }
 
+/** Drops affichés sur le site : seulement ceux qui ont au moins une pièce publiée, du plus récent au plus ancien */
 export async function getDrops(): Promise<Drop[]> {
-  return [...drops].sort((a, b) => b.date.localeCompare(a.date));
+  const products = await getProducts();
+  return drops.filter((d) => products.some((p) => p.dropId === d.id)).sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export async function getDrop(id: string): Promise<Drop | undefined> {
-  return drops.find((d) => d.id === id);
+  return (await getDrops()).find((d) => d.id === id);
 }
 
 export async function getLatestDrop(): Promise<Drop | undefined> {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { CategoryCards, HowToOrder, SocialBlock, StoryTeaser } from "@/components/home/HomeSections";
 import { Hero } from "@/components/home/Hero";
+import { StoreJsonLd } from "@/components/home/StoreJsonLd";
 import { Marquee } from "@/components/layout/Marquee";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { SectionTitle } from "@/components/ui/SectionTitle";
@@ -13,6 +14,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <StoreJsonLd />
       <Hero latestDrop={latestDrop} />
       <Marquee />
 
@@ -20,7 +22,7 @@ export default async function HomePage() {
         <section aria-labelledby="new-title">
           <SectionTitle
             action={
-              <Link href="/shop/" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold underline-offset-4 hover:underline">
+              <Link href="/shop/" className="inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold underline-offset-4 hover:underline">
                 Tout voir <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
             }

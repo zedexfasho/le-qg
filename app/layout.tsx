@@ -1,12 +1,27 @@
 import type { Metadata, Viewport } from "next";
-import { Fredoka, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { site } from "@/data/site";
 import { pageMetadata } from "@/lib/seo";
 import "./globals.css";
 
-const fredoka = Fredoka({ subsets: ["latin"], weight: ["700"], variable: "--font-fredoka", display: "swap" });
+// Polices hébergées dans le projet (app/fonts, jeu « latin » avec les accents) :
+// le build ne dépend pas de Google Fonts, donc pas de police de secours publiée par erreur.
+const fredoka = localFont({
+  src: "./fonts/fredoka-700-latin.woff2",
+  weight: "700",
+  variable: "--font-fredoka",
+  display: "swap",
+  fallback: ["ui-rounded", "Arial", "sans-serif"],
+});
 // Texte courant : pas de préchargement (police de secours ajustée par next/font, pas de décalage)
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap", preload: false });
+const inter = localFont({
+  src: "./fonts/inter-variable-latin.woff2",
+  weight: "100 900",
+  variable: "--font-inter",
+  display: "swap",
+  preload: false,
+  fallback: ["ui-sans-serif", "system-ui", "Arial", "sans-serif"],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),

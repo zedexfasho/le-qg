@@ -67,7 +67,7 @@ Les ventes en boutique, sur Instagram ou par téléphone se saisissent avec **Sa
 | Page | Contenu |
 |---|---|
 | Accueil | Chiffres du jour et du mois, commandes à traiter, alertes de stock |
-| Commandes | Liste filtrable (à traiter, non payées, par origine…), fiche détaillée avec historique et notes |
+| Commandes | Liste filtrable (à traiter, non payées, par origine…), fiche détaillée avec historique et notes. Une **pastille** sur le menu (et dans l'onglet du navigateur) compte les commandes à confirmer ; elle et les listes se mettent à jour toutes seules (toutes les 45 s) quand une commande arrive. |
 | Clients | Fichier clients créé automatiquement à partir des commandes (numéro, quartier, total dépensé, notes) |
 | Produits | Ajout / modification des produits, photos, tailles et **stock** (modifiable directement dans la liste) |
 | Analyses | Chiffre d'affaires, panier moyen, taux de confirmation, meilleures ventes, tailles, zones, origines, meilleurs clients (7 j, 30 j, 90 j, 12 mois) |
@@ -82,7 +82,7 @@ Les ventes en boutique, sur Instagram ou par téléphone se saisissent avec **Sa
 
 Le **stock** et les **prix** sont lus en direct par le site : les modifier ne demande pas de publication. Les nouveaux produits, photos et textes, eux, en demandent une.
 
-Les drops se règlent toujours dans `data/drops.ts` (image de couverture `public/drops/<id>.webp` + `<id>-sm.webp`).
+Les drops se règlent toujours dans `data/drops.ts` (image de couverture `public/drops/<id>.webp` + `<id>-sm.webp`). Un drop n'apparaît sur le site que lorsqu'au moins un produit publié lui est rattaché (champ « Drop » de la fiche produit) : les drops d'exemple restent donc invisibles.
 
 ### Accès et équipe
 
@@ -190,6 +190,7 @@ tests/          tests Vitest
 - **Message WhatsApp** : une seule fonction, `buildWhatsAppMessage()` dans `lib/whatsapp.ts`, utilisée par la fiche produit et le panier.
 - **Formulaire de commande** : les règles (`validateCheckout()` dans `lib/checkout.ts`) sont partagées par la page et par l'API, qui revérifie tout (prix, stock, coordonnées).
 - **Panier** : stocké dans le navigateur (`localStorage`), avec repli en mémoire si le stockage est bloqué (navigation privée).
+- **Polices** : Fredoka et Inter sont hébergées dans `app/fonts` (pas de dépendance à Google Fonts au moment du build).
 - **Catalogue** : la base D1 fait foi. Avant chaque build, `npm run catalog:pull` l'écrit dans `data/catalog.json` et les pages sont générées à partir de ce fichier. Stock et prix sont ensuite rafraîchis en direct par `/api/stock`.
 - **Sécurité** : mots de passe hachés (PBKDF2), session en cookie HttpOnly, vérification d'origine sur toutes les écritures, limitation des tentatives de connexion et des commandes par IP.
 

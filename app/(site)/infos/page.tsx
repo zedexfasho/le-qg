@@ -43,7 +43,7 @@ export default function InfosPage() {
                   <p className="text-sm text-muted">{zone.detail}</p>
                 </div>
                 <p className="shrink-0 text-right font-bold">
-                  {zone.price === null ? <span className="text-sm font-semibold text-muted">Tarif confirmé<br />sur WhatsApp</span> : formatPrice(zone.price)}
+                  {zone.price === null ? <span className="text-sm font-semibold text-muted">Tarif à<br />confirmer</span> : formatPrice(zone.price)}
                 </p>
               </li>
             ))}
@@ -58,7 +58,7 @@ export default function InfosPage() {
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-sm text-muted">Pas de paiement sur le site : tu confirmes ta commande et ton moyen de paiement sur WhatsApp.</p>
+          <p className="mt-4 text-sm text-muted">Rien à payer sur le site : tu choisis ton moyen de paiement en commandant, et on te contacte pour confirmer avant la livraison.</p>
         </Block>
 
         <Block id="echanges" icon={<RefreshCcw className="size-6" aria-hidden="true" />} title="Échanges">

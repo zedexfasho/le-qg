@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, MessageCircle, Shirt, Truck } from "lucide-react";
+import { ArrowRight, Send, Shirt, Truck } from "lucide-react";
 import { LightString } from "@/components/brand/Decor";
 import { WhatsAppIcon } from "@/components/brand/SocialIcons";
 import { SocialLinks } from "@/components/layout/SocialLinks";
@@ -16,6 +16,8 @@ export function CategoryCards({ products }: { products: Product[] }) {
   const cards = categories
     .map((c) => ({ ...c, product: products.find((p) => p.category === c.id) }))
     .filter((c) => c.product);
+  // Pas de produit publié : pas de section vide
+  if (cards.length === 0) return null;
 
   return (
     <section aria-labelledby="cat-title">
@@ -46,8 +48,8 @@ export function CategoryCards({ products }: { products: Product[] }) {
 
 const STEPS = [
   { Icon: Shirt, title: "Choisis", text: "Ton modèle, ta couleur et ta taille dans le catalogue." },
-  { Icon: MessageCircle, title: "Envoie sur WhatsApp", text: "Un message tout prêt part avec ta commande. Tu confirmes, c'est tout." },
-  { Icon: Truck, title: "Reçois chez toi", text: "Livraison Dakar en 24h, banlieue et régions aussi. Paiement Wave, Orange Money ou à la livraison." },
+  { Icon: Send, title: "Commande", text: "Sur le site en deux minutes, ou sur WhatsApp avec un message tout prêt. Rien à payer en ligne." },
+  { Icon: Truck, title: "Reçois chez toi", text: "On t'appelle pour confirmer, puis on livre : Dakar en 24h, banlieue et régions aussi. Paiement Wave, Orange Money ou à la livraison." },
 ];
 
 export function HowToOrder() {

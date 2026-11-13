@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { AlertTriangle, Plus } from "lucide-react";
+import { useState } from "react";
 import { buttonClasses } from "@/components/ui/styles";
 import { formatPrice } from "@/lib/format";
 import { useApi } from "@/lib/admin/api";
 import type { Order } from "@/lib/admin/types";
 import type { OrderStatus } from "@/lib/orders";
-import { useAdminUser } from "../AdminShell";
+import { useAdminUser, usePendingOrders } from "../AdminShell";
 import { OrderList } from "../OrderList";
 import { EmptyState, ErrorBox, Loading, PageHeader, Stat, panelClasses } from "../ui";
 
@@ -28,6 +29,13 @@ const greeting = () => {
 export function HomePage() {
   const user = useAdminUser();
   const { data, error, loading, reload } = useApi<Summary>("/summary");
+  // Nouvelle commande reçue (pastille du menu) : la liste se met à jour toute seule
+  const { signal } = usePendingOrders();
+  const [seenSignal, setSeenSignal] = useState(signal);
+  if (signal !== seenSignal) {
+    setSeenSignal(signal);
+    if (seenSignal) reload();
+  }
 
   const todo = (status: OrderStatus, label: string, hint: string) => {
     const c = data?.counts[status];

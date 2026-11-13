@@ -22,7 +22,7 @@ export function SizeGuide({ productName }: { productName: string }) {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-sm font-semibold underline underline-offset-4 hover:text-accent-strong">
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold underline underline-offset-4 hover:text-accent-strong">
         <Ruler className="size-4" aria-hidden="true" />
         Guide des tailles
       </button>

@@ -12,7 +12,9 @@ import { pageMetadata } from "@/lib/seo";
 export const dynamicParams = false;
 
 export async function generateStaticParams() {
-  return (await getDrops()).map((d) => ({ id: d.id }));
+  const ids = (await getDrops()).map((d) => ({ id: d.id }));
+  // L'export statique exige au moins une page : sans drop visible, une page « introuvable »
+  return ids.length ? ids : [{ id: "aucun-drop" }];
 }
 
 export async function generateMetadata({ params }: PageProps<"/drops/[id]">): Promise<Metadata> {

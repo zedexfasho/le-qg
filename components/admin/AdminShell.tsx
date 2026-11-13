@@ -13,6 +13,55 @@ import { Loading } from "./ui";
 const UserContext = createContext<AdminUser | null>(null);
 export const useAdminUser = () => useContext(UserContext);
 
+interface PendingOrders {
+  /** Commandes au statut « Nouvelle » */
+  count: number;
+  /** Change à chaque nouvelle commande : les pages s'en servent pour se rafraîchir */
+  signal: string;
+}
+const PendingContext = createContext<PendingOrders>({ count: 0, signal: "" });
+/** Commandes à confirmer, rafraîchi toutes les 45 s tant que le dashboard est affiché */
+export const usePendingOrders = () => useContext(PendingContext);
+
+function usePendingPoll(enabled: boolean): PendingOrders {
+  const [state, setState] = useState<PendingOrders>({ count: 0, signal: "" });
+  useEffect(() => {
+    if (!enabled) return;
+    let active = true;
+    const check = () => {
+      if (document.visibilityState !== "visible") return;
+      api<{ nouvelles: number; latest: string | null }>("/orders/pending").then(
+        (r) => {
+          if (!active) return;
+          const signal = `${r.nouvelles}|${r.latest ?? ""}`;
+          setState((s) => (s.signal === signal ? s : { count: r.nouvelles, signal }));
+        },
+        () => undefined,
+      );
+    };
+    check();
+    const timer = setInterval(check, 45_000);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [enabled]);
+  return state;
+}
+
+/** Pastille « n commandes à confirmer » */
+function CountBadge({ count, className = "" }: { count: number; className?: string }) {
+  if (count <= 0) return null;
+  return (
+    <span className={`grid min-w-5 place-items-center rounded-full bg-orange-deep px-1.5 text-[11px] leading-5 font-bold text-cream ${className}`}>
+      {count > 99 ? "99+" : count}
+      <span className="sr-only"> à confirmer</span>
+    </span>
+  );
+}
+
 const NAV = [
   { href: "/admin/", label: "Accueil", icon: Home, match: (p: string) => p === "/admin/" },
   { href: "/admin/commandes/", label: "Commandes", icon: ShoppingBag, match: (p: string) => p.startsWith("/admin/commande") },
@@ -26,6 +75,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/admin/";
   const [user, setUser] = useState<AdminUser | null>(null);
   const [checking, setChecking] = useState(true);
+  const pending = usePendingPoll(!!user && !user.mustChangePassword);
+
+  // Onglet du navigateur : « (3) Commandes | Dashboard Le QG »
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\+?\) /, "");
+    document.title = pending.count > 0 ? `(${pending.count > 99 ? "99+" : pending.count}) ${base}` : base;
+  }, [pending.count, pathname]);
 
   useEffect(() => {
     api<{ user: AdminUser }>("/me")
@@ -54,6 +110,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <UserContext.Provider value={user}>
+      <PendingContext.Provider value={pending}>
       <div className="flex min-h-dvh flex-1">
         {/* Navigation ordinateur */}
         <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 lg:flex">
@@ -72,6 +129,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 >
                   <Icon className="size-5" aria-hidden="true" />
                   {label}
+                  {href === "/admin/commandes/" && <CountBadge count={pending.count} className="ml-auto" />}
                 </Link>
               );
             })}
@@ -115,13 +173,17 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 aria-current={active ? "page" : undefined}
                 className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold ${active ? "text-accent-strong" : "text-muted"}`}
               >
-                <Icon className="size-5" aria-hidden="true" />
+                <span className="relative">
+                  <Icon className="size-5" aria-hidden="true" />
+                  {href === "/admin/commandes/" && <CountBadge count={pending.count} className="absolute -top-1.5 left-3" />}
+                </span>
                 {label}
               </Link>
             );
           })}
         </nav>
       </div>
+      </PendingContext.Provider>
     </UserContext.Provider>
   );
 }

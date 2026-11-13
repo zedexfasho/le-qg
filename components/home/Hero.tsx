@@ -18,7 +18,7 @@ export function Hero({ latestDrop }: { latestDrop?: Drop }) {
           )}
           <h1 className="font-display text-5xl leading-[1.05] font-bold sm:text-6xl">Bienvenue au QG</h1>
           <p className="mx-auto mt-4 max-w-md text-lg font-medium md:mx-0">
-            Le spot streetwear de Dakar. Choisis ta pièce, commande sur WhatsApp, on te livre.
+            Le spot streetwear de Dakar. Choisis ta pièce, commande en deux minutes, on te livre.
           </p>
           <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row md:justify-start">
             <Link

@@ -8,6 +8,7 @@ import { buttonClasses } from "@/components/ui/styles";
 import { useApi } from "@/lib/admin/api";
 import type { Order } from "@/lib/admin/types";
 import { ORDER_SOURCES, SOURCE_LABELS } from "@/lib/orders";
+import { usePendingOrders } from "../AdminShell";
 import { OrderList } from "../OrderList";
 import { EmptyState, ErrorBox, Loading, PageHeader, inputClasses } from "../ui";
 
@@ -46,6 +47,13 @@ export function OrdersPage() {
   if (client) query.set("client", client);
   if (page > 1) query.set("page", String(page));
   const { data, error, loading, reload } = useApi<{ orders: Order[]; total: number; page: number; pageSize: number }>(`/orders?${query}`);
+  // Nouvelle commande reçue (pastille du menu) : la liste se met à jour toute seule
+  const { signal } = usePendingOrders();
+  const [seenSignal, setSeenSignal] = useState(signal);
+  if (signal !== seenSignal) {
+    setSeenSignal(signal);
+    if (seenSignal) reload();
+  }
 
   const navigate = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(params.toString());

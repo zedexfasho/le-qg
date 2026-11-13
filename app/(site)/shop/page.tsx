@@ -9,7 +9,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Catalogue",
-  description: "Tout le catalogue du QG : hoodies, ensembles, joggings, t-shirts, maillots, chemises et accessoires. Commande sur WhatsApp.",
+  description: "Tout le catalogue du QG : hoodies, ensembles, joggings, t-shirts, maillots, chemises et accessoires. Commande en ligne ou sur WhatsApp, livraison 24h à Dakar.",
   path: "/shop/",
 });
 

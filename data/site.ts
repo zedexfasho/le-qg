@@ -20,9 +20,9 @@ function resolveSiteUrl(): string {
 export const site = {
   name: "Le QG",
   url: resolveSiteUrl(),
-  tagline: "Streetwear à Dakar — commande sur WhatsApp",
+  tagline: "Streetwear à Dakar — commande en ligne ou sur WhatsApp",
   description:
-    "Le QG, ton spot streetwear à Dakar : hoodies, ensembles, joggings, t-shirts, maillots et accessoires. Nouveaux drops chaque semaine, commande sur WhatsApp, livraison Dakar 24h.",
+    "Le QG, ton spot streetwear à Dakar : hoodies, ensembles, joggings, t-shirts, maillots et accessoires. Nouveaux drops chaque semaine, commande en ligne ou sur WhatsApp, livraison Dakar 24h.",
 
   /**
    * À REMPLIR — numéro WhatsApp de commande.
@@ -51,7 +51,7 @@ export const site = {
 
   /**
    * À REMPLIR — zones et tarifs de livraison (FCFA).
-   * `price: null` affiche « Tarif confirmé sur WhatsApp ».
+   * `price: null` affiche « Tarif à confirmer » (frais à 0 sur la commande, à régler dans le dashboard).
    */
   delivery: [
     { zone: "Dakar", detail: "Plateau, Médina, Mermoz, Ouakam, Almadies, Parcelles…", delay: "24h", price: null as number | null },
