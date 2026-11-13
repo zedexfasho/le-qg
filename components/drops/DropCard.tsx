@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ProductImage } from "@/components/product/ProductImage";
+import { DEFAULT_DROP_COVER } from "@/lib/drops";
 import { formatDate } from "@/lib/format";
 import type { Drop } from "@/lib/types";
 
@@ -8,7 +9,7 @@ export function DropCard({ drop, count, priority = false }: { drop: Drop; count:
     <Link href={`/drops/${drop.id}/`} className="group block overflow-hidden rounded-3xl bg-gradient-to-br from-sunset to-orange text-brown shadow-warm transition-shadow hover:shadow-warm-lg">
       <div className="relative aspect-[3/2] overflow-hidden">
         <ProductImage
-          src={drop.cover}
+          src={drop.cover ?? DEFAULT_DROP_COVER}
           alt=""
           fill
           preload={priority}

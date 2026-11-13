@@ -12,6 +12,7 @@ import type { AdminProduct } from "@/lib/admin/types";
 import { formatPrice, normalizeText } from "@/lib/format";
 import { mainImage, sizesOf, stockOf } from "@/lib/product";
 import type { Size } from "@/lib/types";
+import { CatalogTabs } from "../CatalogTabs";
 import { PublishButton } from "../PublishButton";
 import {
   EmptyState,
@@ -98,6 +99,7 @@ export function ProductsPage() {
   return (
     <>
       {toast.node}
+      <CatalogTabs />
       <PageHeader
         title="Produits"
         subtitle="Le stock et les prix changent sur le site tout de suite. Nouveaux produits, photos et textes : clique sur « Publier le site »."

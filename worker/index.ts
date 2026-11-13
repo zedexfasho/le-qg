@@ -17,6 +17,7 @@ import {
   adminGetOrder,
   adminListOrders,
   adminPendingOrders,
+  publicTrackOrder,
   adminSummary,
   adminUpdateOrder,
   dailyMaintenance,
@@ -32,7 +33,9 @@ import {
   publicCatalogue,
   publicStock,
 } from "./products";
+import { adminCreateDrop, adminDeleteDrop, adminGetDrop, adminListDrops, adminUpdateDrop } from "./drops";
 import { publish, publishStatus } from "./publish";
+import { adminListRestock, adminUpdateRestock, publicCreateRestock } from "./restock";
 
 type Handler = (ctx: { request: Request; env: AppEnv; exec: ExecutionContext; params: string[] }) => Promise<Response> | Response;
 
@@ -55,6 +58,8 @@ const routes: Route[] = [
   // --- Public (site) ---
   { method: "POST", pattern: /^\/api\/orders$/, public: true, handler: ({ request, env, exec }) => publicCreateOrder(request, env, exec) },
   { method: "GET", pattern: /^\/api\/catalogue$/, public: true, handler: ({ env }) => publicCatalogue(env) },
+  { method: "POST", pattern: /^\/api\/restock$/, public: true, handler: ({ request, env }) => publicCreateRestock(request, env) },
+  { method: "GET", pattern: /^\/api\/orders\/track$/, public: true, handler: ({ request, env }) => publicTrackOrder(request, env) },
   { method: "GET", pattern: /^\/api\/stock$/, public: true, handler: ({ env }) => publicStock(env) },
 
   // --- Connexion ---
@@ -90,6 +95,17 @@ const routes: Route[] = [
   { method: "DELETE", pattern: /^\/api\/admin\/products\/([a-z0-9-]+)$/, handler: ({ env, params }) => adminDeleteProduct(env, params[0]) },
   { method: "POST", pattern: /^\/api\/admin\/products\/([a-z0-9-]+)\/stock$/, handler: ({ request, env, params }) => adminSetStock(request, env, params[0]) },
   { method: "POST", pattern: /^\/api\/admin\/media$/, handler: ({ request, env }) => uploadMedia(request, env) },
+
+  // --- Demandes de retour en stock ---
+  { method: "GET", pattern: /^\/api\/admin\/restock$/, handler: ({ env }) => adminListRestock(env) },
+  { method: "PATCH", pattern: /^\/api\/admin\/restock\/(\d+)$/, handler: ({ request, env, params }) => adminUpdateRestock(request, env, id(params[0])) },
+
+  // --- Drops ---
+  { method: "GET", pattern: /^\/api\/admin\/drops$/, handler: ({ env }) => adminListDrops(env) },
+  { method: "POST", pattern: /^\/api\/admin\/drops$/, handler: ({ request, env }) => adminCreateDrop(request, env) },
+  { method: "GET", pattern: /^\/api\/admin\/drops\/([a-z0-9-]+)$/, handler: ({ env, params }) => adminGetDrop(env, params[0]) },
+  { method: "PUT", pattern: /^\/api\/admin\/drops\/([a-z0-9-]+)$/, handler: ({ request, env, params }) => adminUpdateDrop(request, env, params[0]) },
+  { method: "DELETE", pattern: /^\/api\/admin\/drops\/([a-z0-9-]+)$/, handler: ({ env, params }) => adminDeleteDrop(env, params[0]) },
 
   // --- Équipe, alertes, publication ---
   { method: "GET", pattern: /^\/api\/admin\/users$/, handler: ({ env }) => listUsers(env) },

@@ -2,6 +2,7 @@ import { findVariant } from "@/lib/product";
 import { SIZES, type Product, type Size } from "@/lib/types";
 import { slugify } from "@/lib/format";
 import { validateProduct } from "@/lib/validate-product";
+import { loadDrops } from "./drops";
 import { HttpError, json, nowIso, readJson, type AppEnv } from "./http";
 
 interface ProductRow {
@@ -37,10 +38,11 @@ export async function loadProducts(env: AppEnv, options: { publishedOnly?: boole
 
 /* ------------------------------ Public ------------------------------ */
 
-/** Catalogue publié (utilisé au moment de construire le site) */
+/** Catalogue publié et drops (utilisés au moment de construire le site) */
 export async function publicCatalogue(env: AppEnv): Promise<Response> {
-  const products = (await loadProducts(env, { publishedOnly: true })).map((p) => p.product);
-  return json({ products, generatedAt: nowIso() }, 200, { "Cache-Control": "public, max-age=30" });
+  const [stored, drops] = await Promise.all([loadProducts(env, { publishedOnly: true }), loadDrops(env)]);
+  const products = stored.map((p) => p.product);
+  return json({ products, drops, generatedAt: nowIso() }, 200, { "Cache-Control": "public, max-age=30" });
 }
 
 /** Stock en direct, pour corriger l'affichage des fiches produit entre deux publications */

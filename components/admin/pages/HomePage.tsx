@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, BellRing, Plus } from "lucide-react";
 import { useState } from "react";
 import { buttonClasses } from "@/components/ui/styles";
 import { formatPrice } from "@/lib/format";
@@ -19,6 +19,7 @@ interface Summary {
   week: { received: number; revenue: number; validated: number };
   recent: Order[];
   stock: { outOfStock: number; low: number; products: number };
+  restock: { pending: number; ready: number };
 }
 
 const greeting = () => {
@@ -63,6 +64,20 @@ export function HomePage() {
       {loading && !data && <Loading />}
       {data && (
         <div className="space-y-6">
+          {data.restock.ready > 0 && (
+            <Link
+              href="/admin/demandes/"
+              className="flex items-start gap-3 rounded-2xl bg-[#DDEFD9] p-4 text-[#1F4D17] transition-shadow hover:shadow-warm dark:bg-[#1F3A1A] dark:text-[#CDEBC6]"
+            >
+              <BellRing className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+              <span>
+                <span className="block font-semibold">
+                  {data.restock.ready} client{data.restock.ready > 1 ? "s attendent" : " attend"} une pièce revenue en stock
+                </span>
+                <span className="text-sm">Préviens-{data.restock.ready > 1 ? "les" : "le"} sur WhatsApp en un clic →</span>
+              </span>
+            </Link>
+          )}
           <section aria-labelledby="todo-title">
             <h2 id="todo-title" className="mb-3 font-display text-lg font-bold">
               À traiter

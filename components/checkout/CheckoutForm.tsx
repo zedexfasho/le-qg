@@ -385,10 +385,14 @@ export function OrderConfirmation({ order }: { order: ConfirmedOrder }) {
         <Link href="/shop/" className={buttonClasses("primary", "lg", "w-full")}>
           Continuer mes achats
         </Link>
-        <a href={question} target="_blank" rel="noopener noreferrer" className={buttonClasses("secondary", "md", "w-full")}>
+        <Link href={`/suivi/?ref=${order.ref}`} className={buttonClasses("secondary", "md", "w-full")}>
+          Suivre ma commande
+        </Link>
+        <a href={question} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 text-sm font-semibold underline underline-offset-4">
           <WhatsAppIcon className="size-4" /> Une question ? Écris-nous
         </a>
       </div>
+      <p className="mt-3 text-xs text-muted">Garde ta référence {order.ref} : elle te permet de suivre ta commande à tout moment.</p>
     </div>
   );
 }

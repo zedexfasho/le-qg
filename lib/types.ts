@@ -40,8 +40,8 @@ export interface Drop {
   title: string;
   /** Date ISO */
   date: string;
-  /** Image de couverture */
-  cover: string;
+  /** Image de couverture (sans photo : illustration par défaut) */
+  cover?: string;
   description?: string;
 }
 

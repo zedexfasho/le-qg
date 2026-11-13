@@ -1,5 +1,4 @@
-import { drops } from "@/data/drops";
-import { products } from "@/data/products";
+import { drops, products } from "@/data/products";
 import type { Category, Drop, Product } from "./types";
 
 /**

@@ -1,8 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { drops } from "@/data/drops";
-import { products } from "@/data/products";
+import { drops, products } from "@/data/products";
 import { site } from "@/data/site";
 import { validateProduct } from "@/lib/validate-product";
 import { normalizePhone } from "@/lib/whatsapp";
@@ -35,7 +34,8 @@ describe("catalogue (data/products.ts)", () => {
   });
 
   it("les couvertures de drops existent", () => {
-    expect(drops.filter((d) => !existsSync(publicFile(d.cover))).map((d) => d.id)).toEqual([]);
+    // Couvertures envoyées depuis le dashboard : stockées en ligne (/media), pas dans public/
+    expect(drops.filter((d) => d.cover?.startsWith("/drops/") && !existsSync(publicFile(d.cover))).map((d) => d.id)).toEqual([]);
   });
 
   it("le placeholder de secours existe", () => {

@@ -7,11 +7,10 @@ import { useRef, useState } from "react";
 import { ProductImage } from "@/components/product/ProductImage";
 import { buttonClasses } from "@/components/ui/styles";
 import { categories } from "@/data/categories";
-import { drops } from "@/data/drops";
 import { ApiError, api, useApi } from "@/lib/admin/api";
-import { prepareImage } from "@/lib/admin/image";
+import { uploadPhoto } from "@/lib/admin/image";
 import { slugify } from "@/lib/format";
-import { SIZES, type Category, type Product, type Size, type Variant } from "@/lib/types";
+import { SIZES, type Category, type Drop, type Product, type Size, type Variant } from "@/lib/types";
 import { ErrorBox, Field, Loading, inputClasses, panelClasses, useToast } from "../ui";
 
 const CONDITIONS = ["Neuf avec étiquette", "Neuf sans étiquette", "Très bon état", "Bon état"];
@@ -120,13 +119,7 @@ function PhotoPicker({ images, onChange, onError }: { images: string[]; onChange
     const added: string[] = [];
     for (const file of list) {
       try {
-        const { full, small } = await prepareImage(file);
-        const form = new FormData();
-        const ext = full.type === "image/webp" ? "webp" : "jpg";
-        form.append("full", new File([full], `photo.${ext}`, { type: full.type }));
-        form.append("small", new File([small], `photo-sm.${ext}`, { type: small.type }));
-        const { src } = await api<{ src: string }>("/media", { form });
-        added.push(src);
+        added.push(await uploadPhoto(file));
       } catch (err) {
         onError(`${file.name} : ${(err as Error).message}`);
       } finally {
@@ -185,6 +178,8 @@ export function ProductEditPage() {
   const slug = params.get("slug");
   const isNew = !slug;
   const { data, error, loading, reload } = useApi<{ product: Product; published: boolean; updatedAt: string }>(slug ? `/products/${slug}` : null);
+  const dropList = useApi<{ drops: Drop[] }>("/drops");
+  const drops = dropList.data?.drops ?? [];
   const [form, setForm] = useState<ProductForm | null>(isNew ? emptyForm() : null);
   const [updatedAt, setUpdatedAt] = useState<string | undefined>();
   const [errors, setErrors] = useState<string[]>([]);
@@ -287,9 +282,23 @@ export function ProductEditPage() {
             <Field label="Marque (facultatif)" htmlFor="p-brand" hint="Mention factuelle uniquement.">
               <input id="p-brand" value={form.brandLabel} onChange={(e) => set({ brandLabel: e.target.value })} className={inputClasses} />
             </Field>
-            <Field label="Drop" htmlFor="p-drop">
+            <Field
+              label="Drop"
+              htmlFor="p-drop"
+              hint={
+                <>
+                  Les drops se créent dans{" "}
+                  <Link href="/admin/drops/" className="underline">
+                    Produits → Drops
+                  </Link>
+                  .
+                </>
+              }
+            >
               <select id="p-drop" value={form.dropId} onChange={(e) => set({ dropId: e.target.value })} className={inputClasses}>
                 <option value="">Aucun</option>
+                {/* Drop rattaché mais supprimé ou pas encore chargé : on garde la valeur */}
+                {form.dropId && !drops.some((d) => d.id === form.dropId) && <option value={form.dropId}>{form.dropId}</option>}
                 {drops.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.title}

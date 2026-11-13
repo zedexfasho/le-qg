@@ -38,6 +38,7 @@ export function Footer() {
             <li><Link href="/notre-histoire/" className="hover:text-sunset hover:underline">Notre histoire</Link></li>
             <li><Link href="/infos/" className="hover:text-sunset hover:underline">Livraison & échanges</Link></li>
             <li><Link href="/infos/#paiement" className="hover:text-sunset hover:underline">Paiement</Link></li>
+            <li><Link href="/suivi/" className="hover:text-sunset hover:underline">Suivre ma commande</Link></li>
           </ul>
         </nav>
 
