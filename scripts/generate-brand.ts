@@ -9,10 +9,12 @@
  *   public/brand/badge.png                       badge sans fond (fallback)
  *   public/icons/*                               favicons 16/32, apple-touch 180, PWA 192/512, maskable
  *   public/favicon.ico
- *   public/og/og-default.jpg                     aperçu de partage 1200×630 (JPEG < 300 Ko pour WhatsApp)
+ *   public/og/og-default.jpg                     aperçu de partage 1200×630, seulement s'il n'existe pas
+ *                                                (la version avec photos vient de marketing/affiche/export.mjs)
  *
  * Usage : npm run brand
  */
+import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
@@ -67,7 +69,11 @@ async function main() {
   await writeFile(path.join(ICONS, "icon-maskable-512.png"), await square(512, { padding: 0.12, background: CREAM }));
   await writeFile(path.join(ROOT, "public", "favicon.ico"), buildIco([favicon16, favicon32], [16, 32]));
 
-  // 4. Image Open Graph par défaut
+  // 4. Image Open Graph par défaut (sans écraser l'aperçu avec photos de marketing/affiche)
+  if (existsSync(path.join(OG, "og-default.jpg"))) {
+    console.log("✓ Logos et favicons générés (aperçu de partage existant conservé).");
+    return;
+  }
   const badgeOg = await sharp(badgePng).resize({ width: 560, height: 560, fit: "inside" }).toBuffer();
   await sharp({ create: { width: 1200, height: 630, channels: 3, background: CREAM } })
     .composite([{ input: badgeOg, gravity: "center" }])

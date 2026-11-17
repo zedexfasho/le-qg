@@ -45,3 +45,11 @@ next-env.d.ts
 # Cloudflare (développement local)
 .wrangler
 .dev.vars
+
+# Photos et exports marketing (lourds, gardés hors de git)
+marketing/album/
+marketing/produits/
+marketing/vitrine/
+marketing/affiche/photos/
+marketing/affiche/*.png
+marketing/affiche/*.jpg

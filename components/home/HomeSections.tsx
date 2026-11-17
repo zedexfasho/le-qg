@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Send, Shirt, Truck } from "lucide-react";
 import { LightString } from "@/components/brand/Decor";
@@ -7,6 +8,7 @@ import { ProductImage } from "@/components/product/ProductImage";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { buttonClasses } from "@/components/ui/styles";
 import { categories } from "@/data/categories";
+import { lookbook } from "@/data/lookbook";
 import { site } from "@/data/site";
 import { mainImage } from "@/lib/product";
 import type { Product } from "@/lib/types";
@@ -74,6 +76,42 @@ export function HowToOrder() {
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+/** Photos portées : la vraie vie du QG (data/lookbook.ts) */
+export function Lookbook() {
+  if (lookbook.length === 0) return null;
+  return (
+    <section aria-labelledby="lookbook-title">
+      <SectionTitle
+        kicker="Pris sur le vif"
+        action={
+          <Link href="/shop/" className="inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold underline-offset-4 hover:underline">
+            Le catalogue <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        }
+      >
+        <span id="lookbook-title">Le QG en vrai</span>
+      </SectionTitle>
+      <ul className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 lg:grid-cols-6">
+        {lookbook.map((photo, i) => (
+          <li key={photo.src} className={`w-56 shrink-0 snap-start sm:w-auto ${i % 2 ? "sm:translate-y-4" : ""}`}>
+            <Link href={photo.category ? `/shop/${photo.category}/` : "/shop/"} className="group block rounded-2xl bg-surface p-2 shadow-warm">
+              <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-surface-2">
+                <Image
+                  src={photo.src}
+                  alt={photo.alt}
+                  fill
+                  sizes="(min-width: 1024px) 16vw, (min-width: 640px) 33vw, 224px"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
+                />
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

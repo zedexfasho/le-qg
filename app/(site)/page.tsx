@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { CategoryCards, HowToOrder, SocialBlock, StoryTeaser } from "@/components/home/HomeSections";
+import { CategoryCards, HowToOrder, Lookbook, SocialBlock, StoryTeaser } from "@/components/home/HomeSections";
 import { Hero } from "@/components/home/Hero";
 import { StoreJsonLd } from "@/components/home/StoreJsonLd";
 import { Marquee } from "@/components/layout/Marquee";
@@ -37,6 +37,7 @@ export default async function HomePage() {
         </section>
 
         <CategoryCards products={products} />
+        <Lookbook />
         <HowToOrder />
         <StoryTeaser />
         <SocialBlock />

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { LightString } from "@/components/brand/Decor";
 import { Logo } from "@/components/brand/Logo";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { buttonClasses, containerClasses } from "@/components/ui/styles";
+import { storyPhotos } from "@/data/lookbook";
 import { site } from "@/data/site";
 import { pageMetadata } from "@/lib/seo";
 
@@ -26,7 +28,18 @@ export default function StoryPage() {
               </p>
             ))}
           </div>
-          <Link href="/shop/" className={buttonClasses("primary", "lg", "mt-8")}>
+          {storyPhotos.length > 0 && (
+            <ul className="mt-10 grid grid-cols-3 gap-2 sm:gap-4">
+              {storyPhotos.map((photo, i) => (
+                <li key={photo.src} className={`rounded-2xl bg-surface p-1.5 shadow-warm sm:p-2 ${i === 1 ? "translate-y-3 rotate-1" : "-rotate-1"}`}>
+                  <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-surface-2">
+                    <Image src={photo.src} alt={photo.alt} fill sizes="(min-width: 768px) 220px, 33vw" className="object-cover" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link href="/shop/" className={buttonClasses("primary", "lg", "mt-10")}>
             Passe au QG
           </Link>
         </article>
