@@ -21,7 +21,7 @@ Tout se règle dans **`data/site.ts`** :
 | `exchangePolicy` | Ta vraie politique d'échange (le texte actuel est un exemple). |
 | `story` | Le texte de « Notre histoire » (brouillon à remplacer). |
 
-Ensuite, dans le dashboard (**Produits**), complète et publie tes produits (section 3).
+Ensuite, dans le dashboard : complète et publie tes produits (**Produits**), et règle tes numéros Wave / Orange Money (**Réglages › Paiement**). Voir la section 3.
 
 Le guide des tailles (mesures indicatives) se modifie dans `components/product/SizeGuide.tsx`.
 
@@ -71,7 +71,8 @@ Les ventes en boutique, sur Instagram ou par téléphone se saisissent avec **Sa
 | Clients | Fichier clients créé automatiquement à partir des commandes (numéro, quartier, total dépensé, notes) |
 | Produits | Ajout / modification des produits, photos, tailles et **stock** (modifiable directement dans la liste). Onglets **Drops** (arrivages) et **Demandes de retour** (clients à prévenir) |
 | Analyses | Chiffre d'affaires, panier moyen, taux de confirmation, meilleures ventes, tailles, zones, origines, meilleurs clients (7 j, 30 j, 90 j, 12 mois) |
-| Réglages | Équipe (inviter quelqu'un), mot de passe, alerte Telegram, publication du site |
+| Réglages | Équipe (inviter quelqu'un, admin ou livreur), **paiement Wave / Orange Money**, **codes promo**, mot de passe, alerte Telegram, publication du site |
+| Livraisons | La page du livreur (voir plus bas), accessible aussi aux admins depuis Réglages |
 
 ### Ajouter un produit
 
@@ -94,13 +95,31 @@ Quand une couleur ou une taille est épuisée, le client laisse son numéro What
 
 Page publique **/suivi/** : le client tape sa référence (`QG-…`) et voit où en est sa commande (reçue → confirmée → en livraison → livrée), ses articles et le total. Aucune donnée personnelle n'y est affichée. Le lien est proposé juste après la commande sur le site, dans le pied de page, et ajouté automatiquement aux messages WhatsApp « confirmée » et « en livraison » du dashboard.
 
+### Paiement Wave / Orange Money
+
+**Réglages › Paiement** : le nom affiché au client, ton numéro **Wave** (et si tu as Wave Business, ton lien de paiement `https://pay.wave.com/…`, le montant y est ajouté tout seul), ton numéro **Orange Money**, et un interrupteur par moyen (ex. Orange Money en panne : décoche-le, il disparaît du formulaire de commande, le numéro reste enregistré). Un aperçu montre ce que voit le client. Le changement est en ligne **en une minute, sans republier**.
+
+Sécurité : ces numéros reçoivent l'argent des clients. Seul un **admin** peut les changer, son **mot de passe est redemandé**, le dashboard affiche qui a fait la dernière modification, et si Telegram est branché tu reçois une alerte à chaque changement (ancien → nouveau numéro).
+
+Une fois réglé, le client voit le **montant exact**, le **numéro** de la boutique et la **référence à mettre en motif**, avec des boutons pour copier chacun, un bouton « Payer avec Wave » (si `waveLink` est rempli) et « J'ai payé : j'envoie la capture » (WhatsApp avec un message prêt). Ce bloc apparaît juste après une commande sur le site (si le tarif de livraison est connu), sur **/suivi/** dès que la commande est confirmée, et les mêmes infos sont ajoutées au message WhatsApp « confirmée » du dashboard. Le paiement à la livraison reste possible. Tu marques la commande **payée** toi-même après avoir vu la capture.
+
+Pas de QR code pour l'instant : le client est déjà sur son téléphone, le lien et le numéro à copier sont plus pratiques.
+
+### Codes promo
+
+**Réglages → Codes promo** : crée un code (ex. `AWA10` pour une influenceuse), en **%** ou en **FCFA**, avec si tu veux une date de début et de fin, un minimum d'achat, un nombre maximum d'utilisations ou « première commande seulement ». Chaque client (numéro WhatsApp) ne peut l'utiliser qu'**une fois**. Le client le saisit dans le formulaire de commande (« J'ai un code promo ») ; tout est revérifié par le serveur. Pour chaque code tu vois les **commandes validées**, le **chiffre d'affaires** qu'il a rapporté et le **total des remises**. Tu peux aussi l'ajouter à une commande saisie à la main (DM Instagram…) ou depuis la fiche d'une commande. Un code déjà utilisé ne peut pas être supprimé : désactive-le.
+
+### Le livreur
+
+Dans **Réglages → Équipe**, choisis l'accès **Livreur** en invitant la personne (ou change le rôle d'un membre). Le livreur ne voit qu'une page, **Livraisons**, pensée pour le téléphone : les commandes confirmées avec le nom, le quartier (lien carte), les boutons appeler / WhatsApp, les articles et **la somme à encaisser**. Il appuie sur **Je pars livrer** (la commande passe « en livraison »), puis **Livrée** en cochant « J'ai encaissé … en espèces » (la commande est alors marquée payée). **Souci** ajoute une note dans l'historique de la commande (client injoignable…). Le total encaissé du jour s'affiche en haut. Toutes les autres pages et données du dashboard lui sont refusées par le serveur.
+
 ### Accès et équipe
 
 - Le **premier compte** se crée depuis l'ordinateur, une seule fois (le mot de passe est demandé de façon masquée) :
   ```bash
   npm run admin:create -- --remote
   ```
-- Ensuite, **Réglages → Équipe → Inviter** : un mot de passe provisoire s'affiche, à transmettre à la personne. Elle devra le changer à sa première connexion. Tout le monde a les mêmes droits.
+- Ensuite, **Réglages → Équipe → Inviter** : un mot de passe provisoire s'affiche, à transmettre à la personne. Elle devra le changer à sa première connexion. Les admins ont tous les mêmes droits ; un livreur n'a accès qu'à la page Livraisons.
 - Une personne qui part : **Désactiver** (ses sessions sont coupées immédiatement).
 
 ### Alerte Telegram à chaque nouvelle commande (facultatif)
@@ -154,7 +173,35 @@ Le site est en ligne sur **https://le-qg.junior-cherif.workers.dev** (Cloudflare
    Ça récupère le catalogue du dashboard, construit le site, met la base à jour et envoie le tout en ligne (environ 1 minute). Pour tout vérifier avant : `npm run check`.
 2. Si Cloudflare demande de se reconnecter : `npx wrangler login`, puis clique sur **Allow** dans le navigateur.
 3. L'adresse publique utilisée pour le sitemap et les aperçus WhatsApp est dans `.env.production` (`NEXT_PUBLIC_SITE_URL`).
-4. Nom de domaine (`leqg.sn`…) : tableau de bord Cloudflare → **Workers & Pages → le-qg → Settings → Domains & Routes → Add → Custom domain**, puis mets la nouvelle adresse dans `.env.production` et relance `npm run deploy`.
+4. Nom de domaine : voir **« Premier vrai lancement »** juste en dessous (`npm run domain -- tondomaine.com` règle tout).
+
+### Premier vrai lancement (avec ton nom de domaine)
+
+**1. Le nom de domaine.** Dans le tableau de bord Cloudflare : **Domain Registration → Register Domains**, cherche ton nom et achète-le (paiement par carte, renouvellement annuel au prix coûtant). Vérifie que l'extension voulue est proposée : toutes ne le sont pas (la liste officielle : https://www.cloudflare.com/tld-policies/). Si l'extension n'existe pas chez Cloudflare (par exemple `.sn`, qui demande en plus une présence au Sénégal), achète-la chez un autre registraire, puis dans Cloudflare **Add a domain** (offre gratuite) et remplace les « serveurs de noms » chez ce registraire par les deux que Cloudflare t'indique (quelques heures pour être actif).
+
+**2. Brancher le domaine au site** (une seule commande, depuis le dossier du projet) :
+```bash
+npm run domain -- tondomaine.com
+```
+Ça met la nouvelle adresse partout (`.env.production`, `wrangler.jsonc`) et branche `tondomaine.com` et `www.tondomaine.com` au site : le certificat HTTPS est créé automatiquement au déploiement. Pour ne pas brancher `www` : ajoute `--no-www`.
+
+**3. Vérifier que tout est prêt :**
+```bash
+npm run prelaunch
+```
+Lecture seule : numéro WhatsApp, tarifs de livraison, réseaux, textes, nom de domaine, et dans la base en ligne : produits publiés, comptes du dashboard, numéros de paiement, alertes Telegram, migrations à appliquer. Les ❌ sont à régler avant d'ouvrir au public, les ⚠️ sont à vérifier.
+
+**4. Mettre en ligne :**
+```bash
+npm run deploy
+```
+
+**5. Après le déploiement :**
+- `www` → adresse principale : Cloudflare → ton domaine → **Rules → Redirect Rules → Create rule → modèle « Redirect from WWW to root »** → Deploy. (Sinon les deux adresses affichent le site, sans redirection.)
+- Ouvre `https://tondomaine.com/admin/`, connecte-toi, règle **Réglages › Paiement**, publie tes produits, puis **Réglages › Publier le site** (ou `npm run deploy`).
+- Fais une vraie commande test depuis ton téléphone (formulaire du site), suis-la sur `/suivi/`, puis annule-la dans le dashboard.
+- L'ancienne adresse `le-qg.junior-cherif.workers.dev` continue de marcher (pratique en secours). Le dashboard, lui, garde ta session par adresse : reconnecte-toi une fois sur le nouveau domaine.
+- Google : https://search.google.com/search-console → ajoute le domaine → envoie `https://tondomaine.com/sitemap.xml`.
 
 Réglages : `wrangler.jsonc` (dossier `out/`, base D1, photos dans KV, tâche quotidienne) et `public/_headers` (cache, sécurité).
 

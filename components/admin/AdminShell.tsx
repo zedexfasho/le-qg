@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { BarChart3, ExternalLink, Home, LogOut, Package, Settings, ShoppingBag, Users } from "lucide-react";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Logo } from "@/components/brand/Logo";
 import { api, LOGIN_PATH } from "@/lib/admin/api";
 import type { AdminUser } from "@/lib/admin/types";
+import { homeFor } from "@/lib/team";
 import { ChangePasswordForm } from "./ChangePasswordForm";
 import { Loading } from "./ui";
 
@@ -68,14 +69,22 @@ const NAV = [
   { href: "/admin/clients/", label: "Clients", icon: Users, match: (p: string) => p.startsWith("/admin/client") },
   { href: "/admin/produits/", label: "Produits", icon: Package, match: (p: string) => /^\/admin\/(produit|drop|demandes)/.test(p) },
   { href: "/admin/analyses/", label: "Analyses", icon: BarChart3, match: (p: string) => p.startsWith("/admin/analyses") },
-  { href: "/admin/reglages/", label: "Réglages", icon: Settings, match: (p: string) => p.startsWith("/admin/reglages") },
+  { href: "/admin/reglages/", label: "Réglages", icon: Settings, match: (p: string) => /^\/admin\/(reglages|promos|paiement)/.test(p) },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/admin/";
+  const router = useRouter();
   const [user, setUser] = useState<AdminUser | null>(null);
   const [checking, setChecking] = useState(true);
-  const pending = usePendingPoll(!!user && !user.mustChangePassword);
+  const livreur = user?.role === "livreur";
+  const pending = usePendingPoll(!!user && !user.mustChangePassword && !livreur);
+  // Un livreur n'a accès qu'à la page Livraisons (le serveur refuse le reste)
+  const misplaced = livreur && !pathname.startsWith("/admin/livraisons");
+
+  useEffect(() => {
+    if (misplaced) router.replace(homeFor("livreur"));
+  }, [misplaced, router]);
 
   // Onglet du navigateur : « (3) Commandes | Dashboard Le QG »
   useEffect(() => {
@@ -105,6 +114,25 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <p className="mt-2 mb-6 text-sm text-muted">Pour commencer, choisis ton propre mot de passe (le mot de passe provisoire ne marchera plus).</p>
         <ChangePasswordForm onDone={() => setUser({ ...user, mustChangePassword: false })} />
       </div>
+    );
+  }
+
+  if (livreur) {
+    if (misplaced) return <Loading label="Ouverture des livraisons…" />;
+    return (
+      <UserContext.Provider value={user}>
+        <div className="flex min-h-dvh flex-1 flex-col">
+          <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-bg/95 px-4 py-2 backdrop-blur">
+            <Logo variant="wordmark" width={84} className="block" />
+            <button type="button" onClick={logout} className="flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold hover:bg-ink/5">
+              <LogOut className="size-4" aria-hidden="true" /> Sortir
+            </button>
+          </header>
+          <main id="contenu" className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-10 sm:px-6">
+            {children}
+          </main>
+        </div>
+      </UserContext.Provider>
     );
   }
 

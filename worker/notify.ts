@@ -31,6 +31,7 @@ export async function notifyNewOrder(
     lines: readonly { name: string; color: string; size: Size; qty: number }[];
     /** Rempli quand le client a utilisé le formulaire du site */
     customer?: { name: string; phone: string; district: string; zone: string; payment: PaymentMethod; note: string | null } | null;
+    promo?: { code: string; discount: number } | null;
   },
 ): Promise<void> {
   const lines = order.lines.map((l) => `• ${esc(l.name)} — ${esc(l.color)} — ${formatSize(l.size)} — x${l.qty}`);
@@ -40,6 +41,7 @@ export async function notifyNewOrder(
     [
       `🛍️ <b>Nouvelle commande ${order.ref}</b> (${SOURCE_LABELS[order.source]})`,
       ...lines,
+      ...(order.promo ? [`🏷️ Code ${esc(order.promo.code)} : -${formatPrice(order.promo.discount)}`] : []),
       `<b>Total : ${formatPrice(order.total)}</b>`,
       "",
       ...(order.customer
@@ -62,4 +64,19 @@ export async function testNotification(env: AppEnv): Promise<Response> {
   const ok = await sendTelegram(env, "✅ Le QG : les alertes de commandes fonctionnent !");
   if (!ok) throw new HttpError(502, "Telegram a refusé le message : vérifie le jeton du bot et l'identifiant de discussion.");
   return json({ ok: true });
+}
+
+/** Alerte de sécurité : les numéros de paiement ont changé */
+export async function notifyPaymentChange(env: AppEnv, by: string, changes: readonly string[]): Promise<void> {
+  if (!changes.length) return;
+  await sendTelegram(
+    env,
+    [
+      `🔐 <b>Numéros de paiement modifiés</b> par ${esc(by)}`,
+      ...changes.map((c) => `• ${esc(c)}`),
+      "",
+      "Si ce n'est pas toi ou ton équipe : connecte-toi au dashboard, corrige dans Réglages › Paiement et retire l'accès de la personne.",
+      `<a href="${env.SITE_URL}/admin/paiement/">Ouvrir les réglages de paiement</a>`,
+    ].join("\n"),
+  );
 }

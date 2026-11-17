@@ -11,7 +11,7 @@ export async function adminAnalytics(request: Request, env: AppEnv): Promise<Res
 
   const [orders, items, customers, products] = await Promise.all([
     env.DB.prepare(
-      "SELECT id, status, source, payment_method, paid, delivery_zone, customer_id, subtotal, delivery_fee, created_at FROM orders WHERE created_at >= ?",
+      "SELECT id, status, source, payment_method, paid, delivery_zone, customer_id, subtotal - discount AS subtotal, delivery_fee, created_at FROM orders WHERE created_at >= ?",
     )
       .bind(since)
       .all<{

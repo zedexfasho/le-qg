@@ -94,12 +94,15 @@ export interface DirectOrderSuccess {
   ref: string;
   total: number;
   deliveryFee: number;
+  /** Remise du code promo appliquée par le serveur */
+  discount: number;
 }
 
 export interface DirectOrderFailure {
   ok: false;
   error: string;
-  fields?: CheckoutErrors;
+  /** `promo` : le code promo a été refusé */
+  fields?: CheckoutErrors & { promo?: string };
   shortages?: { name: string; color: string; size: Size; stock: number }[];
 }
 
@@ -109,23 +112,24 @@ export async function submitDirectOrder(
   items: readonly OrderItemInput[],
   checkout: CheckoutFields,
   website = "",
+  promo: string | null = null,
 ): Promise<DirectOrderSuccess | DirectOrderFailure> {
   let res: Response;
   try {
     res = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ref, items, checkout, website }),
+      body: JSON.stringify({ ref, items, checkout, website, ...(promo ? { promo } : {}) }),
     });
   } catch {
     return { ok: false, error: "Pas de connexion internet. Vérifie ton réseau et réessaie." };
   }
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (res.ok) return { ok: true, ref, total: Number(data.total ?? 0), deliveryFee: Number(data.deliveryFee ?? 0) };
+  if (res.ok) return { ok: true, ref, total: Number(data.total ?? 0), deliveryFee: Number(data.deliveryFee ?? 0), discount: Number(data.discount ?? 0) };
   return {
     ok: false,
     error: typeof data.error === "string" ? data.error : "La commande n'a pas pu être envoyée. Réessaie dans un instant.",
-    fields: data.fields as CheckoutErrors | undefined,
+    fields: data.fields as DirectOrderFailure["fields"],
     shortages: data.shortages as DirectOrderFailure["shortages"],
   };
 }

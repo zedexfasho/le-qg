@@ -33,9 +33,13 @@ import {
   publicCatalogue,
   publicStock,
 } from "./products";
+import { deliveryAction, listDeliveries } from "./deliveries";
 import { adminCreateDrop, adminDeleteDrop, adminGetDrop, adminListDrops, adminUpdateDrop } from "./drops";
+import { adminCreatePromo, adminDeletePromo, adminListPromos, adminUpdatePromo, publicCheckPromo } from "./promos";
 import { publish, publishStatus } from "./publish";
 import { adminListRestock, adminUpdateRestock, publicCreateRestock } from "./restock";
+import { adminGetPayment, adminSavePayment, publicPayment } from "./settings";
+import type { Role } from "@/lib/team";
 
 type Handler = (ctx: { request: Request; env: AppEnv; exec: ExecutionContext; params: string[] }) => Promise<Response> | Response;
 
@@ -45,7 +49,11 @@ interface Route {
   handler: Handler;
   /** Accessible sans connexion */
   public?: boolean;
+  /** Rôles autorisés (par défaut : admin seulement) */
+  roles?: readonly Role[];
 }
+
+const EVERYONE: readonly Role[] = ["admin", "livreur"];
 
 const id = (value: string) => {
   const n = Number(value);
@@ -61,12 +69,18 @@ const routes: Route[] = [
   { method: "POST", pattern: /^\/api\/restock$/, public: true, handler: ({ request, env }) => publicCreateRestock(request, env) },
   { method: "GET", pattern: /^\/api\/orders\/track$/, public: true, handler: ({ request, env }) => publicTrackOrder(request, env) },
   { method: "GET", pattern: /^\/api\/stock$/, public: true, handler: ({ env }) => publicStock(env) },
+  { method: "GET", pattern: /^\/api\/payment$/, public: true, handler: ({ env }) => publicPayment(env) },
+  { method: "GET", pattern: /^\/api\/promo$/, public: true, handler: ({ request, env }) => publicCheckPromo(request, env) },
 
   // --- Connexion ---
   { method: "POST", pattern: /^\/api\/admin\/login$/, public: true, handler: ({ request, env }) => login(request, env) },
   { method: "POST", pattern: /^\/api\/admin\/logout$/, public: true, handler: ({ request, env }) => logout(request, env) },
-  { method: "GET", pattern: /^\/api\/admin\/me$/, handler: async ({ request, env }) => me(await user(request, env)) },
-  { method: "POST", pattern: /^\/api\/admin\/me\/password$/, handler: async ({ request, env }) => changePassword(request, env, await user(request, env)) },
+  { method: "GET", pattern: /^\/api\/admin\/me$/, roles: EVERYONE, handler: async ({ request, env }) => me(await user(request, env)) },
+  { method: "POST", pattern: /^\/api\/admin\/me\/password$/, roles: EVERYONE, handler: async ({ request, env }) => changePassword(request, env, await user(request, env)) },
+
+  // --- Livraisons (accessibles au livreur) ---
+  { method: "GET", pattern: /^\/api\/admin\/deliveries$/, roles: EVERYONE, handler: ({ env }) => listDeliveries(env) },
+  { method: "POST", pattern: /^\/api\/admin\/deliveries\/(\d+)$/, roles: EVERYONE, handler: async ({ request, env, params }) => deliveryAction(request, env, await user(request, env), id(params[0])) },
 
   // --- Tableau de bord & analyses ---
   { method: "GET", pattern: /^\/api\/admin\/summary$/, handler: ({ env }) => adminSummary(env) },
@@ -107,10 +121,18 @@ const routes: Route[] = [
   { method: "PUT", pattern: /^\/api\/admin\/drops\/([a-z0-9-]+)$/, handler: ({ request, env, params }) => adminUpdateDrop(request, env, params[0]) },
   { method: "DELETE", pattern: /^\/api\/admin\/drops\/([a-z0-9-]+)$/, handler: ({ env, params }) => adminDeleteDrop(env, params[0]) },
 
+  // --- Codes promo ---
+  { method: "GET", pattern: /^\/api\/admin\/promos$/, handler: ({ env }) => adminListPromos(env) },
+  { method: "POST", pattern: /^\/api\/admin\/promos$/, handler: ({ request, env }) => adminCreatePromo(request, env) },
+  { method: "PUT", pattern: /^\/api\/admin\/promos\/([A-Z0-9-]{3,20})$/, handler: ({ request, env, params }) => adminUpdatePromo(request, env, params[0]) },
+  { method: "DELETE", pattern: /^\/api\/admin\/promos\/([A-Z0-9-]{3,20})$/, handler: ({ env, params }) => adminDeletePromo(env, params[0]) },
+
   // --- Équipe, alertes, publication ---
   { method: "GET", pattern: /^\/api\/admin\/users$/, handler: ({ env }) => listUsers(env) },
   { method: "POST", pattern: /^\/api\/admin\/users$/, handler: ({ request, env }) => createUser(request, env) },
   { method: "PATCH", pattern: /^\/api\/admin\/users\/(\d+)$/, handler: async ({ request, env, params }) => updateUser(request, env, await user(request, env), id(params[0])) },
+  { method: "GET", pattern: /^\/api\/admin\/settings\/payment$/, handler: ({ env }) => adminGetPayment(env) },
+  { method: "PUT", pattern: /^\/api\/admin\/settings\/payment$/, handler: async ({ request, env, exec }) => adminSavePayment(request, env, await user(request, env), exec) },
   { method: "POST", pattern: /^\/api\/admin\/notify\/test$/, handler: ({ env }) => testNotification(env) },
   { method: "GET", pattern: /^\/api\/admin\/publish$/, handler: ({ env }) => publishStatus(env) },
   { method: "POST", pattern: /^\/api\/admin\/publish$/, handler: ({ env }) => publish(env) },
@@ -127,8 +149,12 @@ async function handleApi(request: Request, env: AppEnv, exec: ExecutionContext):
       continue;
     }
     assertSameOrigin(request, env);
-    // Toutes les routes /api/admin sont protégées, sauf connexion/déconnexion
-    if (!route.public && !(await currentUser(request, env))) throw new HttpError(401, "Connexion requise.");
+    // Toutes les routes /api/admin sont protégées, sauf connexion/déconnexion ; le livreur n'a accès qu'à ses livraisons
+    if (!route.public) {
+      const current = await currentUser(request, env);
+      if (!current) throw new HttpError(401, "Connexion requise.");
+      if (!(route.roles ?? ["admin"]).includes(current.role)) throw new HttpError(403, "Accès réservé aux admins de la boutique.");
+    }
     return route.handler({ request, env, exec, params: match.slice(1) });
   }
   throw new HttpError(methodMismatch ? 405 : 404, methodMismatch ? "Méthode non autorisée." : "Route inconnue.");

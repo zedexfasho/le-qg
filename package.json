@@ -14,6 +14,8 @@
     "brand": "tsx scripts/generate-brand.ts",
     "placeholders": "tsx scripts/generate-placeholders.ts",
     "deploy": "npm run catalog:pull && npm run build && wrangler d1 migrations apply le-qg-db --remote && wrangler deploy",
+    "domain": "tsx scripts/set-domain.ts",
+    "prelaunch": "tsx scripts/prelaunch.ts",
     "catalog:pull": "tsx scripts/catalog-pull.ts",
     "db:migrate": "wrangler d1 migrations apply le-qg-db --remote",
     "db:migrate:local": "wrangler d1 migrations apply le-qg-db --local",

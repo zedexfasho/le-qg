@@ -49,6 +49,8 @@ export const site = {
   /** Ligne « Paiement : … » du message WhatsApp */
   paymentLine: "Wave / Orange Money / à la livraison",
 
+  // Numéros Wave / Orange Money : dans le dashboard, Réglages › Paiement (lus en direct par le site)
+
   /**
    * À REMPLIR — zones et tarifs de livraison (FCFA).
    * `price: null` affiche « Tarif à confirmer » (frais à 0 sur la commande, à régler dans le dashboard).

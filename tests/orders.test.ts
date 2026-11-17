@@ -89,7 +89,9 @@ describe("articles", () => {
     expect(lines[0]).toMatchObject({ name: "Hoodie", unitPrice: 25000, stock: 2, image: "/products/h/1.webp" });
   });
   it("totaux", () => {
-    expect(orderTotals([{ qty: 2, unitPrice: 15000 }, { qty: 1, unitPrice: 25000 }], 2000)).toEqual({ subtotal: 55000, count: 3, deliveryFee: 2000, total: 57000 });
+    expect(orderTotals([{ qty: 2, unitPrice: 15000 }, { qty: 1, unitPrice: 25000 }], 2000)).toEqual({ subtotal: 55000, count: 3, deliveryFee: 2000, discount: 0, total: 57000 });
+    expect(orderTotals([{ qty: 1, unitPrice: 20000 }], 2000, 2500)).toMatchObject({ subtotal: 20000, discount: 2500, total: 19500 });
+    expect(orderTotals([{ qty: 1, unitPrice: 3000 }], 1000, 5000)).toMatchObject({ discount: 3000, total: 1000 });
   });
 });
 

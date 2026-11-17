@@ -1,4 +1,5 @@
 import type { OrderSource, OrderStatus, PaymentMethod } from "@/lib/orders";
+import type { Role } from "@/lib/team";
 import type { Drop, Product, Size } from "@/lib/types";
 
 /** Formes des données renvoyées par l'API du dashboard */
@@ -7,6 +8,7 @@ export interface AdminUser {
   id: number;
   email: string;
   name: string;
+  role: Role;
   mustChangePassword: boolean;
 }
 
@@ -34,6 +36,9 @@ export interface Order {
   deliveryZone: string | null;
   deliveryFee: number;
   subtotal: number;
+  /** Remise du code promo */
+  discount: number;
+  promoCode: string | null;
   total: number;
   paymentMethod: PaymentMethod | null;
   paid: boolean;

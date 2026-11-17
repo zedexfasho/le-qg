@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, Ban, Check, Loader2, PackageCheck, Search, Truck } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { WhatsAppIcon } from "@/components/brand/SocialIcons";
+import { PayNow } from "@/components/order/PayNow";
 import { ProductImage } from "@/components/product/ProductImage";
 import { buttonClasses, cardClasses } from "@/components/ui/styles";
 import { formatPrice, formatSize } from "@/lib/format";
-import { parseOrderRef, type OrderStatus } from "@/lib/orders";
+import { PAYMENT_LABELS, parseOrderRef, type OrderStatus, type PaymentMethod } from "@/lib/orders";
+import { paysByMobile } from "@/lib/payment";
 import type { Size } from "@/lib/types";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
@@ -18,7 +20,10 @@ interface TrackedOrder {
   zone: string | null;
   deliveryFee: number | null;
   subtotal: number;
+  discount: number;
+  promoCode: string | null;
   total: number;
+  paymentMethod: PaymentMethod | null;
   paid: boolean;
   createdAt: string;
   confirmedAt: string | null;
@@ -195,6 +200,22 @@ export function OrderTracker() {
               </ol>
             )}
 
+            {!cancelled && !order.paid && order.status !== "livree" && (
+              <div className="mt-6">
+                {!paysByMobile(order.paymentMethod) ? (
+                  <p className="rounded-2xl bg-surface-2 p-3 text-sm">
+                    Paiement à la livraison : prépare <span className="font-semibold">{formatPrice(order.total)}</span> en espèces.
+                  </p>
+                ) : order.status === "nouvelle" ? (
+                  <p className="rounded-2xl bg-surface-2 p-3 text-sm">
+                    Dès qu&apos;on aura confirmé ta commande, le montant exact et le numéro pour payer par Wave ou Orange Money apparaîtront ici.
+                  </p>
+                ) : (
+                  <PayNow orderRef={order.ref} amount={order.total} preferred={order.paymentMethod} />
+                )}
+              </div>
+            )}
+
             <h3 className="mt-7 mb-3 font-display text-lg font-bold">Ta commande</h3>
             <ul className="space-y-3">
               {order.items.map((it) => (
@@ -212,6 +233,12 @@ export function OrderTracker() {
               ))}
             </ul>
             <dl className="mt-4 space-y-1 border-t border-line pt-3 text-sm">
+              {order.discount > 0 && (
+                <div className="flex justify-between gap-3 font-semibold text-accent-strong">
+                  <dt>Code {order.promoCode}</dt>
+                  <dd>-{formatPrice(order.discount)}</dd>
+                </div>
+              )}
               <div className="flex justify-between gap-3">
                 <dt>Livraison{order.zone ? ` (${order.zone})` : ""}</dt>
                 <dd>{order.deliveryFee === null ? "à confirmer" : formatPrice(order.deliveryFee)}</dd>
@@ -222,7 +249,7 @@ export function OrderTracker() {
               </div>
               <div className="flex justify-between gap-3 text-muted">
                 <dt>Paiement</dt>
-                <dd>{order.paid ? "Payé ✓" : "À régler à la livraison ou par Wave / Orange Money"}</dd>
+                <dd className="text-right">{order.paid ? "Payé ✓" : order.paymentMethod ? `${PAYMENT_LABELS[order.paymentMethod]} · à régler` : "À régler"}</dd>
               </div>
             </dl>
           </section>

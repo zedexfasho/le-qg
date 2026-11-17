@@ -26,6 +26,7 @@ export function NewOrderPage() {
   const [status, setStatus] = useState<(typeof START_STATUSES)[number]["value"]>("confirmee");
   const [paid, setPaid] = useState(false);
   const [notes, setNotes] = useState("");
+  const [promoCode, setPromoCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [shortages, setShortages] = useState<Shortage[]>([]);
   const [busy, setBusy] = useState(false);
@@ -40,6 +41,7 @@ export function NewOrderPage() {
           status,
           paid,
           notes: notes.trim() || null,
+          promoCode: promoCode.trim() || null,
           items: items.map(({ slug, color, size, qty }) => ({ slug, color, size, qty })),
           force,
           ...customerPayload(customer),
@@ -104,6 +106,17 @@ export function NewOrderPage() {
             <input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} className="size-5 accent-[var(--accent-strong)]" />
             Déjà payée
           </label>
+          <Field label="Code promo (facultatif)" htmlFor="new-promo" hint="Ex. le code d'un influenceur donné en DM : la remise est déduite et comptée dans ses stats.">
+            <input
+              id="new-promo"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+              autoCapitalize="characters"
+              autoComplete="off"
+              maxLength={24}
+              className={`${inputClasses} uppercase`}
+            />
+          </Field>
           <Field label="Note interne" htmlFor="new-notes">
             <textarea id="new-notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={`${inputClasses} h-auto py-2`} />
           </Field>

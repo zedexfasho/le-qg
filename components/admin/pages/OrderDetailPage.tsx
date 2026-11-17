@@ -13,6 +13,8 @@ import { formatDateTime, timeAgo } from "@/lib/admin/format";
 import type { AdminProduct, OrderDetail, Shortage } from "@/lib/admin/types";
 import { formatPrice, formatSize } from "@/lib/format";
 import { EDITABLE, ISSUE_LABELS, PAYMENT_LABELS, SOURCE_LABELS, STATUS_HINTS, STATUS_LABELS, type LineIssue, type OrderStatus } from "@/lib/orders";
+import { EMPTY_MOBILE_MONEY, paymentInstructions, type MobileMoneyConfig } from "@/lib/payment";
+import { useMobileMoney } from "@/lib/use-mobile-money";
 import { formatPhone, normalizePhone } from "@/lib/phone";
 import { CustomerFields, customerPayload, type CustomerForm } from "../CustomerFields";
 import { OrderItemsEditor, type EditableItem } from "../OrderItemsEditor";
@@ -47,15 +49,17 @@ const NEXT_ACTIONS: Record<OrderStatus, { to: OrderStatus; label: string; primar
 const STATUS_ICON: Partial<Record<OrderStatus, typeof Truck>> = { confirmee: CheckCircle2, en_livraison: Truck, livree: CheckCircle2, annulee: XCircle };
 
 /** Message WhatsApp prêt à envoyer au client selon l'étape */
-function customerMessage(d: Detail): string {
+function customerMessage(d: Detail, money: MobileMoneyConfig): string {
   const o = d.order;
   const hello = `Salam${o.customerName ? ` ${o.customerName}` : ""} 👋`;
   const lines = o.items.map((i) => `• ${i.name} — ${i.color} — ${formatSize(i.size)} — x${i.qty}`).join("\n");
   const track = `Suivre ta commande : ${site.url}/suivi/?ref=${o.ref}`;
-  const total = `Total : ${formatPrice(o.total)}${o.deliveryFee ? ` (dont livraison ${formatPrice(o.deliveryFee)})` : ""}`;
+  const details = [o.deliveryFee ? `dont livraison ${formatPrice(o.deliveryFee)}` : "", o.discount ? `code ${o.promoCode} : -${formatPrice(o.discount)}` : ""].filter(Boolean);
+  const total = `Total : ${formatPrice(o.total)}${details.length ? ` (${details.join(", ")})` : ""}`;
+  const pay = o.paid ? [] : paymentInstructions(o, money);
   switch (o.status) {
     case "confirmee":
-      return `${hello}\nTa commande ${o.ref} est confirmée ✅\n${lines}\n${total}\nOn te livre ${o.district ? `à ${o.district} ` : ""}très vite. Merci de passer au QG !\n${track}`;
+      return `${hello}\nTa commande ${o.ref} est confirmée ✅\n${lines}\n${total}\nOn te livre ${o.district ? `à ${o.district} ` : ""}très vite. Merci de passer au QG !${pay.length ? `\n\n${pay.join("\n")}` : ""}\n${track}`;
     case "en_livraison":
       return `${hello}\nTa commande ${o.ref} est en route 🛵 Le livreur t'appelle bientôt.\n${total}${o.paid ? "" : `\nPaiement : ${o.paymentMethod ? PAYMENT_LABELS[o.paymentMethod] : site.paymentLine}`}\n${track}`;
     case "livree":
@@ -83,12 +87,14 @@ export function OrderDetailPage() {
   const { data, error, loading, reload, setData } = useApi<Detail>(id > 0 ? `/orders/${id}` : null);
   const products = useApi<{ products: AdminProduct[] }>(data && EDITABLE.has(data.order.status) ? "/products" : null);
   const toast = useToast();
+  const money = useMobileMoney();
   const [busy, setBusy] = useState<string | null>(null);
   const [shortages, setShortages] = useState<Shortage[] | null>(null);
   const [customer, setCustomer] = useState<CustomerForm | null>(null);
   const [items, setItems] = useState<EditableItem[] | null>(null);
   const [notes, setNotes] = useState("");
   const [note, setNote] = useState("");
+  const [promoInput, setPromoInput] = useState<string | null>(null);
 
   // Remet les formulaires à jour à chaque rechargement de la commande
   const [synced, setSynced] = useState<Detail | null>(null);
@@ -144,6 +150,9 @@ export function OrderDetailPage() {
   const saveItems = () =>
     run("items", () => api<Detail>(`/orders/${id}`, { method: "PATCH", body: { items: items.map(({ slug, color, size, qty }) => ({ slug, color, size, qty })) } }), "Articles mis à jour.");
   const togglePaid = () => run("paid", () => api<Detail>(`/orders/${id}`, { method: "PATCH", body: { paid: !o.paid } }), o.paid ? "Paiement retiré." : "Commande marquée payée.");
+  const savePromo = async (code: string | null) => {
+    if (await run("promo", () => api<Detail>(`/orders/${id}`, { method: "PATCH", body: { promoCode: code } }), code ? `Code ${code} appliqué.` : "Code promo retiré.")) setPromoInput(null);
+  };
   const saveNotes = () => run("notes", () => api<Detail>(`/orders/${id}`, { method: "PATCH", body: { notes } }), "Note enregistrée.");
   const addNote = async () => {
     if (!note.trim()) return;
@@ -151,7 +160,7 @@ export function OrderDetailPage() {
   };
 
   const phone = normalizePhone(o.customerPhone);
-  const waLink = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(customerMessage(data))}` : null;
+  const waLink = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(customerMessage(data, money ?? EMPTY_MOBILE_MONEY))}` : null;
   const stockIssue = (slug: string, color: string, size: string) => data.stock.find((s) => s.slug === slug && s.color === color && s.size === size);
   const holdsStock = o.status === "confirmee" || o.status === "en_livraison" || o.status === "livree";
   const customerDirty = JSON.stringify(customer) !== JSON.stringify(toForm(data));
@@ -284,6 +293,12 @@ export function OrderDetailPage() {
                 <dt>Articles</dt>
                 <dd className="tabular-nums">{formatPrice(o.subtotal)}</dd>
               </div>
+              {o.discount > 0 && (
+                <div className="flex justify-between font-semibold text-accent-strong">
+                  <dt>Code {o.promoCode}</dt>
+                  <dd className="tabular-nums">-{formatPrice(o.discount)}</dd>
+                </div>
+              )}
               <div className="flex justify-between">
                 <dt>Livraison {o.deliveryZone ? `(${o.deliveryZone})` : ""}</dt>
                 <dd className="tabular-nums">{formatPrice(o.deliveryFee)}</dd>
@@ -294,6 +309,45 @@ export function OrderDetailPage() {
               </div>
             </dl>
             {!EDITABLE.has(o.status) && <p className="mt-2 text-xs text-muted">Articles verrouillés : la commande est confirmée (stock réservé).</p>}
+            {o.status !== "livree" && o.status !== "annulee" && !o.paid && (
+              <div className="mt-3 text-sm">
+                {promoInput === null ? (
+                  <div className="flex flex-wrap gap-x-4">
+                    <button type="button" onClick={() => setPromoInput(o.promoCode ?? "")} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
+                      {o.promoCode ? "Changer le code promo" : "Ajouter un code promo"}
+                    </button>
+                    {o.promoCode && (
+                      <button type="button" onClick={() => savePromo(null)} disabled={busy !== null} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
+                        Retirer le code
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <form
+                    className="flex gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void savePromo(promoInput.trim() || null);
+                    }}
+                  >
+                    <input
+                      value={promoInput}
+                      onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                      aria-label="Code promo"
+                      placeholder="AWA10"
+                      autoFocus
+                      className={`${inputClasses} uppercase`}
+                    />
+                    <button type="submit" disabled={busy !== null} className={buttonClasses("primary", "md")}>
+                      Appliquer
+                    </button>
+                    <button type="button" onClick={() => setPromoInput(null)} className={buttonClasses("ghost", "md")}>
+                      Annuler
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
           </section>
 
           <section className={panelClasses} aria-labelledby="order-customer">

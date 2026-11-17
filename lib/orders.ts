@@ -183,10 +183,12 @@ export function priceItems(items: readonly OrderItemInput[], products: readonly 
   });
 }
 
-export function orderTotals(lines: readonly { qty: number; unitPrice: number }[], deliveryFee = 0) {
+/** Total = articles - remise (code promo, jamais plus que les articles) + livraison */
+export function orderTotals(lines: readonly { qty: number; unitPrice: number }[], deliveryFee = 0, discount = 0) {
   const subtotal = lines.reduce((sum, l) => sum + l.qty * l.unitPrice, 0);
   const count = lines.reduce((sum, l) => sum + l.qty, 0);
-  return { subtotal, count, deliveryFee, total: subtotal + Math.max(0, deliveryFee) };
+  const off = Math.max(0, Math.min(subtotal, Math.round(discount)));
+  return { subtotal, count, deliveryFee, discount: off, total: subtotal - off + Math.max(0, deliveryFee) };
 }
 
 export interface Shortage {

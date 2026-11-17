@@ -2,6 +2,7 @@ import { site } from "@/data/site";
 import { deliveryFeeFor, validateCheckout } from "@/lib/checkout";
 import { formatPrice } from "@/lib/format";
 import { normalizePhone } from "@/lib/phone";
+import { normalizePromoCode, promoDiscount } from "@/lib/promo";
 import {
   EDITABLE,
   ORDER_REF_RE,
@@ -27,6 +28,7 @@ import type { User } from "./auth";
 import { HttpError, clientIp, json, nowIso, optInt, optText, rateLimit, readJson, type AppEnv } from "./http";
 import { notifyNewOrder } from "./notify";
 import { loadProducts, stockStatements } from "./products";
+import { checkPromo, loadPromo } from "./promos";
 import { restockSummary } from "./restock";
 
 /* ------------------------------ Lecture ------------------------------ */
@@ -43,6 +45,9 @@ export interface OrderRow {
   delivery_zone: string | null;
   delivery_fee: number;
   subtotal: number;
+  /** Remise du code promo (FCFA) */
+  discount: number;
+  promo_code: string | null;
   total: number;
   payment_method: PaymentMethod | null;
   paid: number;
@@ -81,6 +86,8 @@ export function orderJson(o: OrderRow, items?: ItemRow[]) {
     deliveryZone: o.delivery_zone,
     deliveryFee: o.delivery_fee,
     subtotal: o.subtotal,
+    discount: o.discount,
+    promoCode: o.promo_code,
     total: o.total,
     paymentMethod: o.payment_method,
     paid: !!o.paid,
@@ -151,7 +158,7 @@ export async function publicCreateOrder(request: Request, env: AppEnv, ctx: Exec
   if (!(await rateLimit(env, `order:${clientIp(request)}`, 20, 3600))) {
     throw new HttpError(429, "Trop de commandes envoyées. Réessaie plus tard.");
   }
-  const body = await readJson<{ ref?: unknown; items?: unknown; checkout?: Record<string, unknown>; website?: unknown }>(request, 16_000);
+  const body = await readJson<{ ref?: unknown; items?: unknown; checkout?: Record<string, unknown>; promo?: unknown; website?: unknown }>(request, 16_000);
   const ref = typeof body.ref === "string" ? body.ref : "";
   if (!ORDER_REF_RE.test(ref)) throw new HttpError(400, "Référence invalide.");
   const items = parseItems(body.items);
@@ -173,18 +180,21 @@ export async function publicCreateOrder(request: Request, env: AppEnv, ctx: Exec
   }
   const { subtotal } = orderTotals(lines);
 
-  // Coordonnées (commande directe uniquement)
+  // Coordonnées et code promo (commande directe uniquement)
   const data = checkout?.data ?? null;
+  const applied = data && body.promo ? await checkPromo(env, body.promo, subtotal, data.phone, ref) : null;
   const customer = data ? await upsertCustomer(env, { phone: data.phone, name: data.name, district: data.district, zone: data.zone }) : null;
   const deliveryFee = data ? (deliveryFeeFor(data.zone) ?? 0) : 0;
-  const total = subtotal + deliveryFee;
+  const discount = applied?.discount ?? 0;
+  const total = subtotal - discount + deliveryFee;
   const clientNote = data?.note ? `Message du client : ${data.note}` : null;
   const contact = data
     ? {
-        sql: "customer_id = ?, customer_name = ?, customer_phone = ?, district = ?, delivery_zone = ?, delivery_fee = ?, payment_method = ?, notes = ?, ",
-        params: [customer?.id ?? null, data.name, data.phone, data.district, data.zone, deliveryFee, data.payment, clientNote],
+        sql: "customer_id = ?, customer_name = ?, customer_phone = ?, district = ?, delivery_zone = ?, delivery_fee = ?, payment_method = ?, notes = ?, promo_code = ?, discount = ?, ",
+        params: [customer?.id ?? null, data.name, data.phone, data.district, data.zone, deliveryFee, data.payment, clientNote, applied?.promo.code ?? null, discount],
       }
     : { sql: "", params: [] };
+  const promoNote = applied ? { code: applied.promo.code, discount } : null;
 
   const existing = await env.DB.prepare("SELECT id, status, source, created_at FROM orders WHERE ref = ?").bind(ref).first<Pick<OrderRow, "id" | "status" | "source" | "created_at">>();
   if (existing) {
@@ -197,27 +207,30 @@ export async function publicCreateOrder(request: Request, env: AppEnv, ctx: Exec
     await env.DB.batch([
       env.DB.prepare("DELETE FROM order_items WHERE order_id = ?").bind(existing.id),
       ...lines.map((l) => itemInsert(env, { id: existing.id }, l)),
-      env.DB.prepare(`UPDATE orders SET ${contact.sql}subtotal = ?, total = ?, updated_at = ? WHERE id = ?`).bind(...contact.params, subtotal, total, nowIso(), existing.id),
+      data
+        ? env.DB.prepare(`UPDATE orders SET ${contact.sql}subtotal = ?, total = ?, updated_at = ? WHERE id = ?`).bind(...contact.params, subtotal, total, nowIso(), existing.id)
+        : // Nouveau clic sur « Commander sur WhatsApp » : on garde frais et remise déjà saisis
+          env.DB.prepare("UPDATE orders SET subtotal = ?1, discount = min(discount, ?1), total = ?1 - min(discount, ?1) + delivery_fee, updated_at = ?2 WHERE id = ?3").bind(subtotal, nowIso(), existing.id),
       eventInsert(env, { id: existing.id }, direct ? "formulaire" : "articles_modifies", {
         note: direct ? "Le client a complété sa commande avec le formulaire du site" : "Le client a renvoyé sa commande depuis le site",
       }),
     ]);
-    if (direct) ctx.waitUntil(notifyNewOrder(env, { ref, lines, total, source: "site", customer: data }).catch((e) => console.error("telegram", e)));
-    return json({ ok: true, ref, total, deliveryFee, updated: true });
+    if (direct) ctx.waitUntil(notifyNewOrder(env, { ref, lines, total, source: "site", customer: data, promo: promoNote }).catch((e) => console.error("telegram", e)));
+    return json({ ok: true, ref, total, deliveryFee, discount, promoCode: promoNote?.code ?? null, updated: true });
   }
 
   await env.DB.batch([
     data
       ? env.DB.prepare(
-          `INSERT INTO orders (ref, status, source, customer_id, customer_name, customer_phone, district, delivery_zone, delivery_fee, payment_method, notes, subtotal, total)
-           VALUES (?, 'nouvelle', 'site', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO orders (ref, status, source, customer_id, customer_name, customer_phone, district, delivery_zone, delivery_fee, payment_method, notes, promo_code, discount, subtotal, total)
+           VALUES (?, 'nouvelle', 'site', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).bind(ref, ...contact.params, subtotal, total)
       : env.DB.prepare("INSERT INTO orders (ref, status, source, subtotal, total) VALUES (?, 'nouvelle', 'site', ?, ?)").bind(ref, subtotal, total),
     ...lines.map((l) => itemInsert(env, { ref }, l)),
     eventInsert(env, { ref }, "creation", { to: "nouvelle", note: direct ? "Commande passée avec le formulaire du site" : "Commande envoyée depuis le site (WhatsApp)" }),
   ]);
-  ctx.waitUntil(notifyNewOrder(env, { ref, lines, total, source: "site", customer: data }).catch((e) => console.error("telegram", e)));
-  return json({ ok: true, ref, total, deliveryFee }, 201);
+  ctx.waitUntil(notifyNewOrder(env, { ref, lines, total, source: "site", customer: data, promo: promoNote }).catch((e) => console.error("telegram", e)));
+  return json({ ok: true, ref, total, deliveryFee, discount, promoCode: promoNote?.code ?? null }, 201);
 }
 
 /* ------------------------------ Clients ------------------------------ */
@@ -346,6 +359,7 @@ export async function adminGetOrder(env: AppEnv, id: number): Promise<Response> 
 }
 
 interface OrderFields extends CustomerInput {
+  promoCode?: unknown;
   deliveryZone?: unknown;
   deliveryFee?: unknown;
   paymentMethod?: unknown;
@@ -357,6 +371,15 @@ function paymentMethodOf(value: unknown): PaymentMethod | null {
   if (value === undefined || value === null || value === "") return null;
   if (!(PAYMENT_METHODS as readonly string[]).includes(value as string)) throw new HttpError(400, "Moyen de paiement inconnu.");
   return value as PaymentMethod;
+}
+
+/** Code promo saisi depuis le dashboard : doit exister (actif ou non), vide = aucun */
+async function promoFromAdmin(env: AppEnv, value: unknown) {
+  if (value === undefined || value === null || value === "") return null;
+  const code = normalizePromoCode(value);
+  const promo = code ? await loadPromo(env, code) : null;
+  if (!promo) throw new HttpError(400, "Ce code promo n'existe pas (crée-le d'abord dans Réglages › Codes promo).");
+  return promo;
 }
 
 /** Saisie manuelle d'une commande (DM Instagram, appel, boutique…) */
@@ -387,7 +410,9 @@ export async function adminCreateOrder(request: Request, env: AppEnv, user: User
   }
 
   const deliveryFee = optInt(body.deliveryFee, { max: 1_000_000 }) ?? 0;
-  const { subtotal, total } = orderTotals(lines, deliveryFee);
+  // Code promo saisi par l'équipe (commande Instagram d'un abonné d'influenceur…) : pas de limite d'utilisation
+  const promo = await promoFromAdmin(env, body.promoCode);
+  const { subtotal, total, discount } = orderTotals(lines, deliveryFee, promo ? promoDiscount(promo, orderTotals(lines).subtotal) : 0);
   const paid = body.paid === true;
   const now = nowIso();
   let ref = generateOrderRef();
@@ -396,8 +421,8 @@ export async function adminCreateOrder(request: Request, env: AppEnv, user: User
   await env.DB.batch([
     env.DB.prepare(
       `INSERT INTO orders (ref, status, source, customer_id, customer_name, customer_phone, district, delivery_zone, delivery_fee,
-         subtotal, total, payment_method, paid, paid_at, notes, confirmed_at, delivered_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         subtotal, total, payment_method, paid, paid_at, notes, confirmed_at, delivered_at, promo_code, discount)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       ref,
       status,
@@ -416,6 +441,8 @@ export async function adminCreateOrder(request: Request, env: AppEnv, user: User
       optText(body.notes, 1000),
       status === "nouvelle" ? null : now,
       status === "livree" ? now : null,
+      promo?.code ?? null,
+      discount,
     ),
     ...lines.map((l) => itemInsert(env, { ref }, l)),
     ...(holds ? stockStatements(env, products, lines, -1) : []),
@@ -486,9 +513,27 @@ export async function adminUpdateOrder(request: Request, env: AppEnv, user: User
     changes.push("articles");
   }
 
+  // Code promo : ajouté / retiré, et remise recalculée quand les articles changent
+  let promoCode = order.promo_code;
+  if (body.promoCode !== undefined) {
+    promoCode = (await promoFromAdmin(env, body.promoCode))?.code ?? null;
+    if (promoCode !== order.promo_code) {
+      set.push("promo_code = ?");
+      params.push(promoCode);
+      changes.push(promoCode ? `code promo ${promoCode}` : "code promo retiré");
+    }
+  }
+  let discount = order.discount;
+  if (promoCode !== order.promo_code || body.items !== undefined) {
+    const promo = promoCode ? await loadPromo(env, promoCode) : null;
+    discount = promo ? promoDiscount(promo, subtotal) : promoCode ? Math.min(order.discount, subtotal) : 0;
+    set.push("discount = ?");
+    params.push(discount);
+  }
+
   if (!set.length && !statements.length) return adminGetOrder(env, id);
   set.push("total = ?", "updated_at = ?");
-  params.push(subtotal + deliveryFee, nowIso());
+  params.push(subtotal - discount + deliveryFee, nowIso());
   if (changes.length) statements.push(eventInsert(env, { id }, "modification", { note: `Modifié : ${changes.join(", ")}`, user }));
   await env.DB.batch([env.DB.prepare(`UPDATE orders SET ${set.join(", ")} WHERE id = ?`).bind(...params, id), ...statements]);
   return adminGetOrder(env, id);
@@ -564,19 +609,19 @@ export async function adminSummary(env: AppEnv): Promise<Response> {
   const today = new Date().toISOString().slice(0, 10);
   const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
   const [counts, unpaid, todayRow, weekRow, recent] = await Promise.all([
-    env.DB.prepare("SELECT status, count(*) AS n, coalesce(sum(subtotal), 0) AS amount FROM orders WHERE status IN ('nouvelle','confirmee','en_livraison') GROUP BY status").all<{
+    env.DB.prepare("SELECT status, count(*) AS n, coalesce(sum(subtotal - discount), 0) AS amount FROM orders WHERE status IN ('nouvelle','confirmee','en_livraison') GROUP BY status").all<{
       status: OrderStatus;
       n: number;
       amount: number;
     }>(),
     env.DB.prepare("SELECT count(*) AS n, coalesce(sum(total), 0) AS amount FROM orders WHERE status IN ('confirmee','en_livraison','livree') AND paid = 0").first<{ n: number; amount: number }>(),
     env.DB.prepare(
-      "SELECT count(*) AS received, coalesce(sum(CASE WHEN status IN ('confirmee','en_livraison','livree') THEN subtotal ELSE 0 END), 0) AS revenue FROM orders WHERE created_at >= ?",
+      "SELECT count(*) AS received, coalesce(sum(CASE WHEN status IN ('confirmee','en_livraison','livree') THEN subtotal - discount ELSE 0 END), 0) AS revenue FROM orders WHERE created_at >= ?",
     )
       .bind(`${today}T00:00:00.000Z`)
       .first<{ received: number; revenue: number }>(),
     env.DB.prepare(
-      "SELECT count(*) AS received, coalesce(sum(CASE WHEN status IN ('confirmee','en_livraison','livree') THEN subtotal ELSE 0 END), 0) AS revenue, coalesce(sum(CASE WHEN status IN ('confirmee','en_livraison','livree') THEN 1 ELSE 0 END), 0) AS validated FROM orders WHERE created_at >= ?",
+      "SELECT count(*) AS received, coalesce(sum(CASE WHEN status IN ('confirmee','en_livraison','livree') THEN subtotal - discount ELSE 0 END), 0) AS revenue, coalesce(sum(CASE WHEN status IN ('confirmee','en_livraison','livree') THEN 1 ELSE 0 END), 0) AS validated FROM orders WHERE created_at >= ?",
     )
       .bind(weekAgo)
       .first<{ received: number; revenue: number; validated: number }>(),
@@ -645,10 +690,10 @@ export async function publicTrackOrder(request: Request, env: AppEnv): Promise<R
   const ref = parseOrderRef(new URL(request.url).searchParams.get("ref") ?? "");
   if (!ref) throw new HttpError(400, "Référence invalide : elle ressemble à QG-7K2M9QX.");
   const order = await env.DB.prepare(
-    "SELECT id, ref, status, delivery_zone, delivery_fee, subtotal, total, paid, created_at, confirmed_at, delivered_at, cancelled_at FROM orders WHERE ref = ?",
+    "SELECT id, ref, status, delivery_zone, delivery_fee, subtotal, discount, promo_code, total, payment_method, paid, created_at, confirmed_at, delivered_at, cancelled_at FROM orders WHERE ref = ?",
   )
     .bind(ref)
-    .first<Pick<OrderRow, "id" | "ref" | "status" | "delivery_zone" | "delivery_fee" | "subtotal" | "total" | "paid" | "created_at" | "confirmed_at" | "delivered_at" | "cancelled_at">>();
+    .first<Pick<OrderRow, "id" | "ref" | "status" | "delivery_zone" | "delivery_fee" | "subtotal" | "discount" | "promo_code" | "total" | "payment_method" | "paid" | "created_at" | "confirmed_at" | "delivered_at" | "cancelled_at">>();
   if (!order) throw new HttpError(404, "Aucune commande avec cette référence. Vérifie-la, ou écris-nous.");
 
   const [items, shipped] = await Promise.all([
@@ -669,7 +714,10 @@ export async function publicTrackOrder(request: Request, env: AppEnv): Promise<R
       zone: order.delivery_zone,
       deliveryFee: order.delivery_fee,
       subtotal: order.subtotal,
+      discount: order.discount,
+      promoCode: order.promo_code,
       total: order.total,
+      paymentMethod: order.payment_method,
       paid: !!order.paid,
       createdAt: order.created_at,
       confirmedAt: order.confirmed_at,

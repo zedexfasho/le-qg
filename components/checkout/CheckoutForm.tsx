@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, Send, Tag, X } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { WhatsAppIcon } from "@/components/brand/SocialIcons";
+import { PayNow } from "@/components/order/PayNow";
 import { Modal } from "@/components/ui/Modal";
 import { buttonClasses } from "@/components/ui/styles";
 import { site } from "@/data/site";
@@ -18,8 +19,11 @@ import {
 import { formatPrice, formatSize } from "@/lib/format";
 import { submitDirectOrder, type DirectOrderFailure } from "@/lib/order-capture";
 import type { OrderItemInput } from "@/lib/orders";
+import type { MobileMethod } from "@/lib/payment";
 import { formatPhone } from "@/lib/phone";
+import { normalizePromoCode, promoDiscount, type PromoKind } from "@/lib/promo";
 import { readStorage, writeStorage } from "@/lib/storage";
+import { useMobileMoney } from "@/lib/use-mobile-money";
 import type { OrderLine } from "@/lib/types";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
@@ -33,9 +37,18 @@ export interface ConfirmedOrder {
   zone: string;
   payment: (typeof CHECKOUT_PAYMENTS)[number];
   subtotal: number;
+  /** Remise du code promo (0 sans code) */
+  discount: number;
+  promoCode: string | null;
   /** null = frais à confirmer avec le client */
   deliveryFee: number | null;
   lines: readonly OrderLine[];
+}
+
+interface AppliedPromo {
+  code: string;
+  kind: PromoKind;
+  value: number;
 }
 
 /** Coordonnées mémorisées sur cet appareil (si le client l'a demandé) */
@@ -91,9 +104,39 @@ export function CheckoutForm({
   const [sending, setSending] = useState(false);
   const honeypot = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promo, setPromo] = useState<AppliedPromo | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoBusy, setPromoBusy] = useState(false);
+  // Wave ou Orange Money désactivé dans le dashboard : on ne le propose pas
+  const money = useMobileMoney();
+  const payments = CHECKOUT_PAYMENTS.filter((p) => !money?.disabled?.includes(p as MobileMethod));
+  const payment = (payments as readonly string[]).includes(fields.payment) ? fields.payment : "";
 
   const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
   const fee = fields.zone ? deliveryFeeFor(fields.zone) : null;
+  const discount = promo ? promoDiscount(promo, subtotal) : 0;
+
+  const applyPromo = async () => {
+    const code = normalizePromoCode(promoInput);
+    if (!code) {
+      setPromoError("Code invalide.");
+      return;
+    }
+    setPromoBusy(true);
+    setPromoError(null);
+    try {
+      const res = await fetch(`/api/promo?code=${encodeURIComponent(code)}&subtotal=${subtotal}`);
+      const data = (await res.json().catch(() => ({}))) as Partial<AppliedPromo> & { error?: string };
+      if (res.ok && data.code && data.kind && typeof data.value === "number") setPromo({ code: data.code, kind: data.kind, value: data.value });
+      else setPromoError(data.error ?? "Code refusé.");
+    } catch {
+      setPromoError("Pas de connexion internet. Réessaie.");
+    } finally {
+      setPromoBusy(false);
+    }
+  };
   const set = (patch: Partial<CheckoutFields>) => {
     setFields((f) => ({ ...f, ...patch }));
     // L'erreur d'un champ disparaît dès qu'on le corrige
@@ -113,7 +156,7 @@ export function CheckoutForm({
     event.preventDefault();
     if (sending) return;
     setFailure(null);
-    const { data, errors: errs } = validateCheckout(fields);
+    const { data, errors: errs } = validateCheckout({ ...fields, payment });
     if (!data) {
       setErrors(errs);
       focusFirstError(errs);
@@ -121,12 +164,21 @@ export function CheckoutForm({
     }
     setSending(true);
     const ref = getRef();
-    const result = await submitDirectOrder(ref, items, fields, honeypot.current?.value ?? "");
+    const result = await submitDirectOrder(ref, items, { ...fields, payment }, honeypot.current?.value ?? "", promo?.code ?? null);
     setSending(false);
     if (!result.ok) {
-      if (result.fields) {
-        setErrors(result.fields);
-        focusFirstError(result.fields);
+      const { promo: promoProblem, ...fieldErrors } = result.fields ?? {};
+      if (promoProblem) {
+        // Code devenu invalide entre-temps : on le retire, le client peut renvoyer sans
+        setPromo(null);
+        setPromoOpen(true);
+        setPromoError(promoProblem);
+        setFailure({ ...result, error: `Code promo refusé : ${promoProblem} Renvoie la commande sans le code, ou essaie un autre code.` });
+        return;
+      }
+      if (Object.keys(fieldErrors).length) {
+        setErrors(fieldErrors);
+        focusFirstError(fieldErrors);
       }
       setFailure(result);
       return;
@@ -139,6 +191,8 @@ export function CheckoutForm({
       zone: data.zone,
       payment: data.payment,
       subtotal,
+      discount: result.discount,
+      promoCode: promo?.code ?? null,
       deliveryFee: deliveryFeeFor(data.zone),
       lines,
     });
@@ -252,14 +306,14 @@ export function CheckoutForm({
 
       <fieldset>
         <legend className="mb-1.5 font-semibold">Paiement</legend>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {CHECKOUT_PAYMENTS.map((p, i) => (
+        <div className={`grid gap-2 ${payments.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          {payments.map((p, i) => (
             <label key={p} className={`${choiceClasses} items-center`}>
               <input
                 type="radio"
                 name={`${id}-payment`}
                 value={p}
-                checked={fields.payment === p}
+                checked={payment === p}
                 onChange={() => set({ payment: p })}
                 data-field={i === 0 ? "payment" : undefined}
                 aria-describedby={describedBy("payment")}
@@ -304,18 +358,81 @@ export function CheckoutForm({
         Mémoriser mes coordonnées sur ce téléphone
       </label>
 
+      <div>
+        {promo ? (
+          <p className="flex items-center justify-between gap-2 rounded-2xl bg-surface-2 px-4 py-3 text-sm">
+            <span className="flex items-center gap-2 font-semibold">
+              <Tag className="size-4 text-accent-strong" aria-hidden="true" /> Code {promo.code} appliqué
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setPromo(null);
+                setPromoInput("");
+              }}
+              className="inline-flex min-h-11 items-center gap-1 font-semibold underline underline-offset-4"
+            >
+              <X className="size-4" aria-hidden="true" /> Retirer
+            </button>
+          </p>
+        ) : promoOpen ? (
+          <div>
+            <label htmlFor={`${id}-promo`} className="mb-1.5 block font-semibold">
+              Code promo
+            </label>
+            <div className="flex gap-2">
+              <input
+                id={`${id}-promo`}
+                value={promoInput}
+                onChange={(e) => {
+                  setPromoInput(e.target.value.toUpperCase());
+                  setPromoError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void applyPromo();
+                  }
+                }}
+                autoCapitalize="characters"
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={24}
+                aria-invalid={!!promoError}
+                aria-describedby={promoError ? `${id}-promo-error` : undefined}
+                className={`${inputClasses} h-12 min-w-0 flex-1 font-semibold tracking-wide uppercase`}
+              />
+              <button type="button" onClick={applyPromo} disabled={promoBusy || !promoInput.trim()} className={buttonClasses("secondary", "lg", "shrink-0 px-5")}>
+                {promoBusy ? <Loader2 className="size-5 animate-spin" aria-hidden="true" /> : "Appliquer"}
+              </button>
+            </div>
+            <FieldError id={`${id}-promo-error`} message={promoError ?? undefined} />
+          </div>
+        ) : (
+          <button type="button" onClick={() => setPromoOpen(true)} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold underline underline-offset-4">
+            <Tag className="size-4" aria-hidden="true" /> J&apos;ai un code promo
+          </button>
+        )}
+      </div>
+
       <dl className="space-y-1 border-t border-line pt-4 text-sm">
         <div className="flex justify-between">
           <dt>Articles</dt>
           <dd>{formatPrice(subtotal)}</dd>
         </div>
+        {promo && (
+          <div className="flex justify-between font-semibold text-accent-strong">
+            <dt>Code {promo.code}</dt>
+            <dd>-{formatPrice(discount)}</dd>
+          </div>
+        )}
         <div className="flex justify-between">
           <dt>Livraison</dt>
           <dd className="text-right">{fields.zone ? (fee === null ? "à confirmer avec toi" : formatPrice(fee)) : "selon ta zone"}</dd>
         </div>
         <div className="flex justify-between text-lg font-bold">
           <dt>Total</dt>
-          <dd>{formatPrice(subtotal + (fee ?? 0))}</dd>
+          <dd>{formatPrice(subtotal - discount + (fee ?? 0))}</dd>
         </div>
       </dl>
 
@@ -340,7 +457,7 @@ export function CheckoutForm({
         <Send className="size-5" aria-hidden="true" />
         {sending ? "Envoi en cours…" : "Envoyer ma commande"}
       </button>
-      <p className="text-center text-xs text-muted">Rien à payer maintenant : on te contacte pour confirmer, puis tu paies à la livraison ou par mobile money.</p>
+      <p className="text-center text-xs text-muted">Rien à payer sur le site : avec Wave ou Orange Money, tu envoies le montant au numéro de la boutique ; sinon tu paies à la livraison.</p>
     </form>
   );
 }
@@ -348,6 +465,8 @@ export function CheckoutForm({
 /** Écran affiché une fois la commande reçue */
 export function OrderConfirmation({ order }: { order: ConfirmedOrder }) {
   const firstName = order.name.split(" ")[0];
+  const total = order.subtotal - order.discount + (order.deliveryFee ?? 0);
+  const mobile = order.payment !== "especes";
   const question = buildWhatsAppUrl(`Salam Le QG 👋 J'ai passé la commande ${order.ref} sur le site. `);
   return (
     <div role="status" className="text-center">
@@ -367,19 +486,37 @@ export function OrderConfirmation({ order }: { order: ConfirmedOrder }) {
             <dd className="shrink-0">{formatPrice(l.unitPrice * l.qty)}</dd>
           </div>
         ))}
+        {order.discount > 0 && (
+          <div className="flex justify-between gap-3 font-semibold text-accent-strong">
+            <dt>Code {order.promoCode}</dt>
+            <dd className="shrink-0">-{formatPrice(order.discount)}</dd>
+          </div>
+        )}
         <div className="flex justify-between gap-3 border-t border-line pt-2">
           <dt>Livraison ({order.zone})</dt>
           <dd>{order.deliveryFee === null ? "à confirmer" : formatPrice(order.deliveryFee)}</dd>
         </div>
         <div className="flex justify-between gap-3 font-bold">
           <dt>Total</dt>
-          <dd>{formatPrice(order.subtotal + (order.deliveryFee ?? 0))}</dd>
+          <dd>{formatPrice(total)}</dd>
         </div>
         <div className="flex justify-between gap-3 text-muted">
           <dt>Paiement</dt>
           <dd>{CHECKOUT_PAYMENT_LABELS[order.payment]}</dd>
         </div>
       </dl>
+
+      {mobile && (
+        <div className="mx-auto mt-5 max-w-sm">
+          {order.deliveryFee === null ? (
+            <p className="rounded-2xl bg-surface-2 p-3 text-left text-sm">
+              On te confirme d&apos;abord les frais de livraison. Ensuite, le montant exact et le numéro pour payer seront sur ta page de suivi.
+            </p>
+          ) : (
+            <PayNow orderRef={order.ref} amount={total} preferred={order.payment} title="Payer maintenant (ou à la livraison)" />
+          )}
+        </div>
+      )}
 
       <div className="mx-auto mt-6 flex max-w-sm flex-col gap-3">
         <Link href="/shop/" className={buttonClasses("primary", "lg", "w-full")}>
