@@ -4,6 +4,9 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "le-qg",
   "main": "worker/index.ts",
+  // Garde l'adresse le-qg.<compte>.workers.dev active en plus du nom de domaine (secours)
+  "workers_dev": true,
+  "preview_urls": false,
   "compatibility_date": "2026-11-01",
   "assets": {
     "directory": "./out",
@@ -13,6 +16,11 @@
     // Seules l'API et les photos passent par le Worker ; tout le reste est servi directement
     "run_worker_first": ["/api/*", "/media/*"]
   },
+  // Nom de domaine (npm run domain -- …) : branché automatiquement au déploiement
+  "routes": [
+    { "pattern": "le-qg.store", "custom_domain": true },
+    { "pattern": "www.le-qg.store", "custom_domain": true }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
@@ -23,7 +31,7 @@
   ],
   "kv_namespaces": [{ "binding": "MEDIA", "id": "e71ace0001ca4c6e824fdf1954b3870e" }],
   "vars": {
-    "SITE_URL": "https://le-qg.junior-cherif.workers.dev",
+    "SITE_URL": "https://le-qg.store",
     "GITHUB_REPO": "zedexfasho/le-qg",
     "GITHUB_WORKFLOW": "deploy.yml"
   },

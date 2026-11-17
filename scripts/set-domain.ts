@@ -53,5 +53,5 @@ writeFileSync(wranglerFile, w);
 
 console.log(`✓ Adresse du site : ${url}`);
 console.log(`✓ Domaines branchés au déploiement : ${patterns.join(", ")}`);
-if (withWww) console.log(`  (www.${domain} : ajoute la redirection vers ${domain}, voir README « Mise en ligne avec ton nom de domaine »)`);
+if (withWww) console.log(`  (www.${domain} : ajoute la redirection vers ${domain}, voir README « Premier vrai lancement », étape 5)`);
 console.log("\nÉtapes suivantes :\n  npm run prelaunch   (vérifie que tout est prêt)\n  npm run deploy");

@@ -29,7 +29,7 @@ export const site = {
    * Format accepté : "+221 77 123 45 67", "771234567" ou "221771234567".
    * Tant qu'il est vide, WhatsApp s'ouvre et le client choisit lui-même le destinataire.
    */
-  whatsapp: "" as string,
+  whatsapp: "+221 78 928 53 88" as string,
 
   /** À REMPLIR — identifiants sans le @ (laisser vide pour masquer le lien) */
   socials: {

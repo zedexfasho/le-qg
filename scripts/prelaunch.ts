@@ -49,7 +49,7 @@ else report("ok", `Nom de domaine : ${envUrl} (${routes.join(", ")})`);
 
 function wranglerOut(args: string[]): { ok: boolean; out: string } {
   const local = path.join(process.cwd(), "node_modules", "wrangler", "bin", "wrangler.js");
-  const r = spawnSync(process.execPath, [local, ...args], { encoding: "utf8", env: { ...process.env, WRANGLER_LOG: "error" } });
+  const r = spawnSync(process.execPath, [local, ...args], { encoding: "utf8" });
   return { ok: r.status === 0, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
 }
 
@@ -75,7 +75,8 @@ if (offline) {
   const pending = [...migrations.out.matchAll(/(\d{4}_[\w-]+\.sql)/g)].map((m) => m[1]);
   if (!migrations.ok) report("warn", "Impossible de lire les migrations en ligne");
   else if (pending.length) report("ok", `Migrations à appliquer au prochain déploiement (automatique) : ${pending.join(", ")}`);
-  else report("ok", "Base en ligne à jour");
+  else if (/no migrations/i.test(migrations.out)) report("ok", "Base en ligne à jour");
+  else report("warn", "État des migrations en ligne inconnu");
 
   const products = query<{ n: number }>("SELECT COUNT(*) AS n FROM products WHERE published = 1");
   const drafts = query<{ n: number }>("SELECT COUNT(*) AS n FROM products WHERE published = 0");
