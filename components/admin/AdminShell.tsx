@@ -104,7 +104,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     window.location.assign(LOGIN_PATH);
   };
 
-  if (checking || !user) return <Loading label={checking ? "Chargement du dashboard…" : "Redirection vers la connexion…"} />;
+  if (checking || !user) return <Loading full label={checking ? "On ouvre le QG…" : "Redirection vers la connexion…"} />;
 
   if (user.mustChangePassword) {
     return (
@@ -118,7 +118,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   if (livreur) {
-    if (misplaced) return <Loading label="Ouverture des livraisons…" />;
+    if (misplaced) return <Loading full label="On prépare les livraisons…" />;
     return (
       <UserContext.Provider value={user}>
         <div className="flex min-h-dvh flex-1 flex-col">

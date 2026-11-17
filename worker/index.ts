@@ -39,6 +39,7 @@ import { adminCreatePromo, adminDeletePromo, adminListPromos, adminUpdatePromo, 
 import { publish, publishStatus } from "./publish";
 import { adminListRestock, adminUpdateRestock, publicCreateRestock } from "./restock";
 import { adminGetPayment, adminSavePayment, publicPayment } from "./settings";
+import { serveAdminPage } from "./admin-pages";
 import type { Role } from "@/lib/team";
 
 type Handler = (ctx: { request: Request; env: AppEnv; exec: ExecutionContext; params: string[] }) => Promise<Response> | Response;
@@ -166,6 +167,7 @@ export default {
     try {
       if (pathname.startsWith("/api/")) return await handleApi(request, env as AppEnv, exec);
       if (pathname.startsWith("/media/")) return await serveMedia(request, env as AppEnv, exec);
+      if (pathname === "/admin" || pathname.startsWith("/admin/")) return await serveAdminPage(request, env as AppEnv);
       return env.ASSETS.fetch(request);
     } catch (err) {
       return errorResponse(err);

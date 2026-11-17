@@ -122,6 +122,13 @@ Dans **Réglages → Équipe**, choisis l'accès **Livreur** en invitant la pers
 - Ensuite, **Réglages → Équipe → Inviter** : un mot de passe provisoire s'affiche, à transmettre à la personne. Elle devra le changer à sa première connexion. Les admins ont tous les mêmes droits ; un livreur n'a accès qu'à la page Livraisons.
 - Une personne qui part : **Désactiver** (ses sessions sont coupées immédiatement).
 
+**Sécurité du dashboard** (déjà en place, rien à faire) :
+- Sans connexion, le serveur ne renvoie **aucune page** du dashboard : toute adresse `/admin/…` mène à la page de connexion. Un livreur ne reçoit que la page Livraisons. Les données passent de leur côté par l'API, qui vérifie la session et le rôle à chaque demande.
+- Connexion limitée à 10 essais par 15 minutes (par appareil et par e-mail). Cookie de session protégé (inaccessible aux scripts, envoyé seulement en HTTPS et seulement par le site lui-même).
+- Changer son mot de passe (bouton en haut du dashboard) **déconnecte tous les autres appareils**. À faire si un téléphone est perdu ou si quelqu'un a vu le mot de passe.
+- Pages du dashboard jamais mises en cache ni indexées par Google.
+- **Verrou supplémentaire (facultatif, gratuit)** : Cloudflare Zero Trust › Access › Applications › *Self-hosted*, domaine `le-qg.store`, chemin `admin` (ajoute une 2ᵉ application pour `api/admin`), règle « Emails » avec les adresses de l'équipe. Avant même la page de connexion, Cloudflare demande alors un code reçu par e-mail.
+
 ### Alerte Telegram à chaque nouvelle commande (facultatif)
 
 1. Sur Telegram, ouvre **@BotFather** → `/newbot` → choisis un nom. Il te donne un **jeton**.

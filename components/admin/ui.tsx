@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import { FunLoader } from "@/components/brand/FunLoader";
 import { STATUS_LABELS, type OrderStatus } from "@/lib/orders";
 
 /* Petits composants partagés par les pages du dashboard */
@@ -36,13 +37,9 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   );
 }
 
-export function Loading({ label = "Chargement…" }: { label?: string }) {
-  return (
-    <div className="flex items-center justify-center gap-2 py-16 text-muted" role="status">
-      <Loader2 className="size-5 animate-spin" aria-hidden="true" />
-      {label}
-    </div>
-  );
+/** Chargement d'une page du dashboard (petite version de l'écran d'attente du site) ; full = écran entier */
+export function Loading({ label, full = false }: { label?: string; full?: boolean }) {
+  return <FunLoader label={label} tone="admin" variant={full ? "full" : "compact"} />;
 }
 
 export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {

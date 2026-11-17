@@ -108,16 +108,25 @@ export async function changePassword(request: Request, env: AppEnv, user: User):
   const next = typeof body.next === "string" ? body.next : "";
   const problem = passwordProblem(next);
   if (problem) throw new HttpError(400, problem);
-  const row = await env.DB.prepare("SELECT password_hash, password_salt, password_iterations FROM users WHERE id = ?")
-    .bind(user.id)
-    .first<{ password_hash: string; password_salt: string; password_iterations: number }>();
-  if (!row || !(await verifyPassword(current, { hash: row.password_hash, salt: row.password_salt, iterations: row.password_iterations }))) {
-    throw new HttpError(400, "Le mot de passe actuel est incorrect.");
+  // Vérifie l'ancien mot de passe (limité à 5 essais / 15 min, comme pour les réglages sensibles)
+  try {
+    await confirmPassword(env, user, current);
+  } catch (e) {
+    if (e instanceof HttpError && e.status === 400) throw new HttpError(400, "Le mot de passe actuel est incorrect.");
+    throw e;
   }
   const h = await hashPassword(next);
-  await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ?, password_iterations = ?, must_change_password = 0 WHERE id = ?")
-    .bind(h.hash, h.salt, h.iterations, user.id)
-    .run();
+  const token = readCookie(request, COOKIE) ?? "";
+  await env.DB.batch([
+    env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ?, password_iterations = ?, must_change_password = 0 WHERE id = ?").bind(
+      h.hash,
+      h.salt,
+      h.iterations,
+      user.id,
+    ),
+    // Déconnecte tous les autres appareils (téléphone perdu, mot de passe vu par quelqu'un…) ; garde celui-ci
+    env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND token_hash != ?").bind(user.id, await sha256(token)),
+  ]);
   return json({ ok: true });
 }
 

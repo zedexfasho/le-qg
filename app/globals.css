@@ -97,6 +97,73 @@
   }
 }
 
+/* Écran d'attente (components/brand/FunLoader.tsx) : un verre d'attaya = 2,4 s */
+.qg-teapot {
+  transform-box: view-box;
+  transform-origin: 104px 58px;
+  transform: rotate(18deg);
+  animation: qg-tilt 2.4s ease-in-out infinite;
+}
+.qg-stream {
+  stroke-dasharray: 7 5;
+  animation: qg-flow 0.5s linear infinite;
+}
+.qg-fill {
+  animation: qg-fill 2.4s ease-out both;
+}
+.qg-bubble {
+  animation: qg-bubble 1.2s ease-in-out infinite;
+}
+.qg-steam {
+  animation: qg-steam 2.4s ease-in-out infinite;
+}
+@keyframes qg-tilt {
+  0%,
+  100% {
+    transform: rotate(14deg);
+  }
+  50% {
+    transform: rotate(22deg);
+  }
+}
+@keyframes qg-flow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+@keyframes qg-fill {
+  from {
+    transform: translateY(46px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes qg-bubble {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-2px);
+    opacity: 0.5;
+  }
+}
+@keyframes qg-steam {
+  0% {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+}
+
 html {
   -webkit-tap-highlight-color: transparent;
   scroll-behavior: smooth;
